@@ -7,4 +7,5 @@ int main(){
 	string start;
 	getline(cin, start);
 	std::cout << start << std::endl;
+	
 }
