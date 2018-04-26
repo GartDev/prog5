@@ -20,7 +20,7 @@ mkdsk.o :
 sys : ssfs
 
 ssfs : ssfs.o
-	g++ -Wall -g ssfs.o -o ssfs
+	g++ -Wall -g ssfs.o -pthread -o ssfs
 
 ssfs.o :
 	g++ -c ssfs.cpp
