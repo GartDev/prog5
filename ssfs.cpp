@@ -11,6 +11,11 @@ void *read_file(void *arg){
 	std::ifstream opfile;
 	char* file_name = (char*)arg;
 	opfile.open(file_name);
+	if(!opfile){
+		perror(file_name);
+		pthread_exit(NULL);
+	}
+	//print lines of the file, don't delete yet
 	for (std::string line; std::getline(opfile, line);) {
         std::cout << line << std::endl;
     }
@@ -19,16 +24,17 @@ void *read_file(void *arg){
 }
 
 int main(int argc, char **argv){
-	pthread_t *threads = new pthread_t[argc-2];
+	if(argc < 2){
+		std::cout << "Error: too few arguments." << std::endl;
+	}
+	pthread_t p;
 	int rc;
-	for(int i = 2; i < (argc-1); i++){
-		rc = pthread_create(&threads[i], NULL, read_file, (void*)argv[i]);
+	for(int i = 2; i < argc; i++){
+		rc = pthread_create(&p, NULL, read_file, (void*)argv[i]);
 		if(rc){
 			std::cout << "Unable to create thread." << std::endl;
 			exit(0);
 		}
 	}
-	delete [] threads;
-
 	pthread_exit(NULL);
 }
