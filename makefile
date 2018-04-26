@@ -28,4 +28,4 @@ ssfs.o :
 
 
 clean :
-	rm -f *.o ssfs_mkdsk ssfs
+	rm -f *.o ssfs_mkdsk ssfs DISK
