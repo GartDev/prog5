@@ -2,6 +2,7 @@
 #include <fstream>
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
 #include <pthread.h>
 
 pthread_cond_t fill, empty;
@@ -16,8 +17,43 @@ void *read_file(void *arg){
 		pthread_exit(NULL);
 	}
 	//print lines of the file, don't delete yet
-	for (std::string line; std::getline(opfile, line);) {
+	std::string line;
+	while(!opfile.eof()){
+		std::getline(opfile,line);
         std::cout << line << std::endl;
+		istringstream line_stream(line);
+		std::string command;
+		line_stream >> command;
+		std::string ssfs_file;
+		if(command == "CREATE"){
+			line_stream >> ssfs_file;
+			std::string unix_file;
+			line_stream >> unix_file;
+			//disk.create(ssfs_file,unix_file)
+
+		}else if(command == "IMPORT"){
+			line_stream >> ssfs_file;
+
+		}else if(command == "CAT"){
+			line_stream >> ssfs_file;
+
+		}else if(command == "DELETE"){
+			line_stream >> ssfs_file;
+
+		}else if(command == "WRITE"){
+			line_stream >> ssfs_file;
+
+		}else if(command == "READ"){
+			line_stream >> ssfs_file;
+
+		}else if(command == "LIST"){
+
+		}else if(command == "SHUTDOWN"){
+			std::cout << "Shutting down " << file_name << "..." << std::endl;
+			pthread_exit(NULL);
+		}else{
+			std::cout << line << ": command not found" << std::endl;
+		}
     }
 	opfile.close();
 	pthread_exit(NULL);
