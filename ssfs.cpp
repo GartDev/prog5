@@ -18,43 +18,56 @@ void *read_file(void *arg){
 	}
 	//print lines of the file, don't delete yet
 	std::string line;
-	while(!opfile.eof()){
-		std::getline(opfile,line);
+	while(std::getline(opfile,line)){
         std::cout << line << std::endl;
-		istringstream line_stream(line);
+		std::istringstream line_stream(line);
 		std::string command;
 		line_stream >> command;
 		std::string ssfs_file;
 		if(command == "CREATE"){
 			line_stream >> ssfs_file;
-			std::string unix_file;
-			line_stream >> unix_file;
-			//disk.create(ssfs_file,unix_file)
-
+			std::cout << "Creating " << ssfs_file << std::endl;
+			//disk.create(ssfs_file);
 		}else if(command == "IMPORT"){
 			line_stream >> ssfs_file;
-
+			std::string unix_file;
+			line_stream >> unix_file;
+			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
+			//disk.import(ssfs_file,unix_file);
 		}else if(command == "CAT"){
 			line_stream >> ssfs_file;
-
+			std::cout << "Contents of " << ssfs_file << std::endl;
+			//disk.cat(ssfs_file);
 		}else if(command == "DELETE"){
 			line_stream >> ssfs_file;
-
+			std::cout << "Deleting " << ssfs_file << std::endl;
+			//disk.delete(ssfs_file);
 		}else if(command == "WRITE"){
 			line_stream >> ssfs_file;
-
+			char c;
+			int start_byte, num_bytes;
+			line_stream >> c;
+			line_stream >> start_byte;
+			line_stream >> num_bytes;
+			std::cout << "Writing character '" << c << "' into "<< ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
+			//disk.write(ssfs_file,character,start_byte,num_bytes);
 		}else if(command == "READ"){
 			line_stream >> ssfs_file;
-
+			int start_byte, num_bytes;
+			line_stream >> start_byte;
+			line_stream >> num_bytes;
+			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
+			//disk.read(ssfs_file,start_byte,num_bytes);
 		}else if(command == "LIST"){
-
+			std::cout << "Listing" << std::endl;
+			//disk.list();
 		}else if(command == "SHUTDOWN"){
 			std::cout << "Shutting down " << file_name << "..." << std::endl;
 			pthread_exit(NULL);
-		}else{
+		}else {
 			std::cout << line << ": command not found" << std::endl;
 		}
-    }
+	}
 	opfile.close();
 	pthread_exit(NULL);
 }
