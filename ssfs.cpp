@@ -10,11 +10,13 @@
 pthread_cond_t fill, empty;
 pthread_mutex_t mutex;
 
-*inode createFile(string fileName);
+*inode createFile(string fileName,int flag);
 void deleteFile(string fileName);
 bool write(std::string fname, char to_write, int start_byte, int num_bytes);
 void read(std::string fname, int start_byte, int num_bytes);
 
+void list();
+bool insert(*inode lilwayne);
 
 void *read_file(void *arg){
 	std::ifstream opfile;
@@ -96,9 +98,21 @@ int main(int argc, char **argv){
 	pthread_exit(NULL);
 }
 
-*inode createFile(string fileName){
-    inode *mynode(fileName, 0);
-    return(mynode);
+*inode createFile(string fileName,int flag){ //Pass 0 for flag if creating a non-existant file, Pass 1 if creating a file based on a Unix file
+	if(flag == 0){
+		//if(!fblist.empty()){
+		inode *mynode(fileName, 0);
+    	return(mynode);
+		//}
+	}else if(flag == 1){
+		//int numblocks = filesize/blocksize ceiling
+	//	if(numblocks <= freeblocks){
+
+	}
+	}
+}
+bool insert(*inode lilwayne){
+
 }
 void deleteFile(string fileName){
     //Get the inode from the inode map using fileName as the key
@@ -109,6 +123,19 @@ void deleteFile(string fileName){
     //remove the inode from the inode map
 	//inodemap.erase(fileName)
 }
+
+void list(){
+	//for each element in inodemap, display the inode->name and inode->size
+	//map<string,int>::iterator it = map.begin();
+	//string fileName;
+	//int block;
+		//while(it!= map.end(){
+		//fileName = it -> first;
+		//fileSize = it -> second;
+		//cout << "Name: " << fileName << "::Size: "<< filesize << " bytes" << endl;
+//}
+
+
 
 bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 	inode inode = inode_map[fname]	
