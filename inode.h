@@ -8,7 +8,7 @@ class inode {
     public:
 	inode(std::string file_name, int file_size) {
 		this->file_name = file_name;
-		this->file_size = file_size;	
+		this->file_size = file_size;
 	}
 
         std::string file_name;
@@ -16,5 +16,4 @@ class inode {
         int direct_blocks [12];
         int * indirect_block;
 	int ** double_indirect_block;
-
 };

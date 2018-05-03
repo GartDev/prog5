@@ -18,14 +18,17 @@ int files_in_system;
 std::map<std::string, int> inode_map;
 int free_block_list[512];
 
-/*
-*inode createFile(string fileName);
-void deleteFile(string fileName);
-*/
-
 void get_system_parameters();
 void build_inode_map(); 
 void build_free_block_list();
+
+//*inode createFile(string fileName,int flag);
+void deleteFile(std::string fileName);
+bool write(std::string fname, char to_write, int start_byte, int num_bytes);
+void read(std::string fname, int start_byte, int num_bytes);
+
+void list();
+//bool insert(*inode lilwayne);
 
 void *read_file(void *arg){
 	std::ifstream opfile;
@@ -160,12 +163,8 @@ void get_system_parameters() {
 }
 
 // Disk Ops below ------------------------
-/*
-*inode createFile(string fileName){
-    inode *mynode(fileName, 0);
-    return(mynode);
-}
-void deleteFile(string fileName){
+
+void deleteFile(std::string fileName){
     //Get the inode from the inode map using fileName as the key
 	//inode target = inodeMap[fileName]
     //return the blocks to the freelist
@@ -175,19 +174,49 @@ void deleteFile(string fileName){
 	//inodemap.erase(fileName)
 }
 
-
+void list(){
+	//for each element in inodemap, display the inode->name and inode->size
+	//map<string,int>::iterator it = map.begin();
+	//string fileName;
+	//int block;
+		//while(it!= map.end(){
+		//fileName = it -> first;
+		//fileSize = it -> second;
+		//cout << "Name: " << fileName << "::Size: "<< filesize << " bytes" << endl;
+//
+}
 
 bool write(std::string fname, char to_write, int start_byte, int num_bytes){
-	//i need some way to search the disk for a file by name, that would go here
-	//for now I'll treat this pointer boy as if its a pointer to a block object indexed by integers
-	Block * the_block;
-	//check block size, return error if start_byte is out of bounds
-
-	//check if file needs to be extended
+//	inode inode = inode_map[fname];
 		
+	//check file size, return error if start_byte is out of bounds
+//	int current_size = inode.file_size;
+//	if(current_size < start_byte){
+		return false;
+//	}
+	//check if file needs to be extended
+//	if(current_size	< (start_byte + num_bytes)){
+		if(sizeof(free_block_list) == 0){
+			return false;
+		}
+		else{
+		//expand the file
+		}
+//	}
 	
 }
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
-}*/
+
+//	inode inode = INODE_MAP[fname]	
+//	int current_size = inode.file_size;
+	int real_read_length = num_bytes;
+//	if(current_size < start_byte){
+		std::cout << "Start byte is out of range" << std::endl;
+//	}
+//	if((start_byte + num_bytes) > inode.file_size){
+//		real_read_length =(num_bytes - ((start_byte + num_bytes) >
+//		 inode.file_size));
+//	}
+}
