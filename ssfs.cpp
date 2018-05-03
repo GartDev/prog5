@@ -1,17 +1,31 @@
 /* https://is2-ssl.mzstatic.com/image/thumb/Video/v4/ed/79/b0/ed79b0c0-7617-a714-15be-2378cdb58221/source/1200x630bb.jpg */
 
-#include <iostream>
+#include "inode.h"
+
 #include <fstream>
 #include <stdlib.h>
-#include <string.h>
 #include <sstream>
 #include <pthread.h>
+#include <map>
 
 pthread_cond_t fill, empty;
 pthread_mutex_t mutex;
 
+std::string disk_file_name;
+int num_blocks;
+int block_size;
+int files_in_system;
+std::map<std::string, int> inode_map;
+int free_block_list[512];
+
+/*
 *inode createFile(string fileName);
 void deleteFile(string fileName);
+*/
+
+void get_system_parameters();
+void build_inode_map(); 
+void build_free_block_list();
 
 void *read_file(void *arg){
 	std::ifstream opfile;
@@ -80,7 +94,43 @@ void *read_file(void *arg){
 int main(int argc, char **argv){
 	if(argc < 2){
 		std::cout << "Error: too few arguments." << std::endl;
+		exit(1);
 	}
+
+	disk_file_name = std::string(argv[1]);
+
+	get_system_parameters();
+//	build_inode_map();
+
+/*
+	inode * s = new inode("sample.txt", 128);
+
+	int j;
+	for (j = 0 ; j < 12 ; j++) {
+		s->direct_blocks[j] = 2*j;
+	}
+
+	FILE * disk = fopen(disk_file_name.c_str(), "rb+");
+	fwrite(s, sizeof(char), sizeof(inode), disk);
+	fclose(disk);
+
+	inode * s2;
+
+	char c[sizeof(inode)];
+
+	FILE * disk2 = fopen(disk_file_name.c_str(), "rb");
+	fread(c, sizeof(char), sizeof(inode), disk2);
+
+	s2 = (inode *) c;
+	std::cout << s2->file_name << std::endl;
+	std::cout << s2->file_size << std::endl;
+	fclose(disk2);
+
+	for (j = 0 ; j < 12 ; j++) {
+		std::cout << s2->direct_blocks[j] << std::endl;
+	}
+*/
+
 	pthread_t p;
 	int rc;
 	for(int i = 2; i < argc; i++){
@@ -93,6 +143,24 @@ int main(int argc, char **argv){
 	pthread_exit(NULL);
 }
 
+// File System startup scan below --------
+
+void get_system_parameters() {
+	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary); 
+
+	std::string line;
+	getline(disk, line, ' ');
+	num_blocks = std::stoi(line);
+	getline(disk, line, ' ');
+	block_size = std::stoi(line);
+	getline(disk, line, '|');
+	files_in_system = std::stoi(line);
+
+	disk.close();
+}
+
+// Disk Ops below ------------------------
+/*
 *inode createFile(string fileName){
     inode *mynode(fileName, 0);
     return(mynode);
@@ -107,6 +175,8 @@ void deleteFile(string fileName){
 	//inodemap.erase(fileName)
 }
 
+
+
 bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 	//i need some way to search the disk for a file by name, that would go here
 	//for now I'll treat this pointer boy as if its a pointer to a block object indexed by integers
@@ -120,4 +190,4 @@ bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
-}
+}*/

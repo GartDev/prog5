@@ -29,9 +29,9 @@ int main(int argc, char * argv[ ]) {
 
 	// argument parsing
 	try {
-		num_blocks = stoi(argv[1]);
-		block_size = stoi(argv[2]);
-	} catch (invalid_argument e) {
+		num_blocks = std::stoi(argv[1]);
+		block_size = std::stoi(argv[2]);
+	} catch (std::invalid_argument e) {
 		std::cout << "num_blocks and block_size must be valid integers." << std::endl;
 		print_usage_string();
 		exit(1);
@@ -47,11 +47,11 @@ int main(int argc, char * argv[ ]) {
 	}
 
 	// writing disk parameters and other cool stuff to top
-	ofstream disk_output(disk_file_name, ios::out | ios::binary);
+	std::ofstream disk_output(disk_file_name, std::ios::out | std::ios::binary);
 	truncate(disk_file_name.c_str(), num_blocks*block_size);
 
-	std::string num_blocks_s = to_string(num_blocks);
-	std::string block_size_s = to_string(block_size);
+	std::string num_blocks_s = std::to_string(num_blocks);
+	std::string block_size_s = std::to_string(block_size);
 
 	const char * num_blocks_c = num_blocks_s.c_str();
 	const char * block_size_c = block_size_s.c_str();
