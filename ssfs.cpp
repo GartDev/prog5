@@ -12,6 +12,9 @@ pthread_mutex_t mutex;
 
 *inode createFile(string fileName);
 void deleteFile(string fileName);
+bool write(std::string fname, char to_write, int start_byte, int num_bytes);
+void read(std::string fname, int start_byte, int num_bytes);
+
 
 void *read_file(void *arg){
 	std::ifstream opfile;
@@ -108,16 +111,41 @@ void deleteFile(string fileName){
 }
 
 bool write(std::string fname, char to_write, int start_byte, int num_bytes){
-	//i need some way to search the disk for a file by name, that would go here
-	//for now I'll treat this pointer boy as if its a pointer to a block object indexed by integers
-	Block * the_block;
-	//check block size, return error if start_byte is out of bounds
-
-	//check if file needs to be extended
+	inode inode = inode_map[fname]	
 		
+	//check file size, return error if start_byte is out of bounds
+	int current_size = inode.file_size;
+	if(current_size < start_byte){
+		return false;
+	}
+	//check if file needs to be extended
+	if(current_size	< (start_byte + num_bytes)){
+		if(FREE_BLOCKS.size() == 0){
+			return false;
+		}
+		else{
+		//expand the file
+		}
+	}
 	
 }
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
+	inode inode = INODE_MAP[fname]	
+	int current_size = inode.file_size;
+	int real_read_length = num_bytes;
+	if(current_size < start_byte){
+		cout << "Start byte is out of range" << endl;
+	}
+	if((start_byte + num_bytes) > inode.file_size){
+		real_read_length =(num_bytes - ((start_byte + num_bytes) >
+		 inode.file_size))
+	}
+
+	
+	
+	
+
+
 }
