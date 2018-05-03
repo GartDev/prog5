@@ -8,6 +8,9 @@
 pthread_cond_t fill, empty;
 pthread_mutex_t mutex;
 
+*inode createFile(string fileName);
+void deleteFile(string fileName);
+
 void *read_file(void *arg){
 	std::ifstream opfile;
 	char* file_name = (char*)arg;
@@ -86,4 +89,18 @@ int main(int argc, char **argv){
 		}
 	}
 	pthread_exit(NULL);
+}
+
+*inode createFile(string fileName){
+    inode *mynode(fileName, 0);
+    return(mynode);
+}
+void deleteFile(string fileName){
+    //Get the inode from the inode map using fileName as the key
+	//inode target = inodeMap[fileName]
+    //return the blocks to the freelist
+	//target.indirectblocks clear
+	//target.directblocks clear
+    //remove the inode from the inode map
+	//inodemap.erase(fileName)
 }
