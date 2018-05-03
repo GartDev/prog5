@@ -1,4 +1,6 @@
 #include "ssfsDisk.cpp"
+#include <unistd.h>
+#include <sys/types.h>
 
 void print_usage_string();
 
@@ -29,7 +31,7 @@ int main(int argc, char * argv[ ]) {
 	}
 
 	// checking argument validity
-	if (num_blocks < 1024 or num_blocks > 128000) {
+	if (num_blocks < 1024 or num_blocks > 131072) {
 		std::cout << "Error: need 1024 <= num_blocks <= 128K." << std::endl;
 		exit(1);
 	}
@@ -37,40 +39,42 @@ int main(int argc, char * argv[ ]) {
 		std::cout << "Error: need 128 <= block_size <= 512." << std::endl;
 	}
 
-	// writing disk parameters to top
+	// writing disk parameters and other cool stuff to top
 	ofstream disk_output(disk_file_name, ios::out | ios::binary);
+	truncate(disk_file_name.c_str(), num_blocks*block_size);
 
 	std::string num_blocks_s = to_string(num_blocks);
 	std::string block_size_s = to_string(block_size);
 
 	const char * num_blocks_c = num_blocks_s.c_str();
 	const char * block_size_c = block_size_s.c_str();
-	const char * disk_file_name_c = disk_file_name.c_str();
 
+	// LINE 1 OF DISK: PARAMETERS
+	// format: "num_blocks block_size files_in_system"
+	// num blocks, a space, block size, a space, number of files in the system
 	disk_output.write(num_blocks_c, num_blocks_s.length()*sizeof(char));
+	disk_output.write(" ", sizeof(char));
 	disk_output.write(block_size_c, block_size_s.length()*sizeof(char));
-	disk_output.write(disk_file_name_c, disk_file_name.length()*sizeof(char));
+	disk_output.write(" 0", 2*sizeof(char));
 
-	/* TESTING BINARY WRITE SHENANIGANS
-	ssfsDisk * disk = new ssfsDisk(num_blocks, block_size, disk_file_name);
+	disk_output.write("\n", sizeof(char));
 
-	const char * disk_c = (const char *) disk;
-	disk_output.write(disk_c, sizeof(ssfsDisk));
+	// LINE 2 OF DISK: INODE MAP
+	// format: "file_name:inode_location file_name2:inode_location ..."
+	// file name followed by : followed by its location. files are 
+	// separated by spaces. still deciding how to represent location
+	disk_output.write("sam:loc", 7*sizeof(char));
 
-	ifstream disk_input(disk_file_name, ios::in | ios::binary);
+	disk_output.write("\n", sizeof(char));
 
-	char new_disk_c[sizeof(ssfsDisk)];
-	disk_input.read(new_disk_c, sizeof(ssfsDisk));
+	// LINE 3 OF DISK: FREE BLOCKS
+	// format: "<block#>-<block#> <block#>-<block#> ..."
+	// list of block numbers that are free, 1-4 means that
+	// blocks 1, 2, 3, and 4 are free but not 5, etc..
+	disk_output.write("1-", 2*sizeof(char));
+	disk_output.write(num_blocks_c, num_blocks_s.length()*sizeof(char));
 
-	ssfsDisk * disk2 = (ssfsDisk *) new_disk_c;
-
-	std::cout << disk2->num_blocks << std::endl;
-	std::cout << disk2->block_size << std::endl;
-	std::cout << disk2->num_files << std::endl;
-	std::cout << disk2->disk_file_name << std::endl;
-	
-	disk_input.close();
-	*/
+	disk_output.write("\n", sizeof(char));
 
 	// close disk
 	disk_output.close();

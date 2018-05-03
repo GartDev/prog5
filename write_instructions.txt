@@ -1,4 +1,4 @@
-How to Read and Write Data Structures in Binary Like George Lopez
+Hellfire
 
 See commented code in mkdsk.cpp for a working example
 
@@ -20,3 +20,24 @@ READING
 
 For more information, consult the mkdsk.cpp file or this image:
 https://is2-ssl.mzstatic.com/image/thumb/Video/v4/ed/79/b0/ed79b0c0-7617-a714-15be-2378cdb58221/source/1200x630bb.jpg
+
+	/* RIP working char pointer shenanigans, April 2018 - April 2018
+	const char * disk_c = (const char *) disk;
+	disk_output.write(disk_c, sizeof(ssfsDisk));
+
+	ifstream disk_input(disk_file_name, ios::in | ios::binary);
+
+	char new_disk_c[sizeof(ssfsDisk)];
+	disk_input.read(new_disk_c, sizeof(ssfsDisk));
+
+	ssfsDisk * disk2 = (ssfsDisk *) new_disk_c;
+
+	std::cout << disk2->num_blocks << std::endl;
+	std::cout << disk2->block_size << std::endl;
+	std::cout << disk2->num_files << std::endl;
+	std::cout << disk2->disk_file_name << std::endl;
+	
+	disk_input.close();
+	*/
+
+
