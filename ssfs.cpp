@@ -371,9 +371,18 @@ bool add_blocks(std::string fname, int num_blocks){
 		else{break;}
 	}
 	//this is the double indirect level
-//	while(num_blocks != 0){
-
-//	}
+	while(num_blocks != 0){
+		if(inode.double_indirect_blocks.size() < (block_size/sizeof(int))){
+			int block = free_block_list.back();
+			if(inode.double_indirect_blocks.back().size() < (block_size/sizeof(int))){
+				inode.double_indirect_blocks.push_back(
+			inode.double_indirect_blocks.back().push_back(block);
+			free_block_list.pop_back();
+			num_blocks--;
+		}
+		else{break;}
+	
+	}
 */
 return false;
 }
