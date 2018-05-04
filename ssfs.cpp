@@ -1,7 +1,6 @@
 /* https://is2-ssl.mzstatic.com/image/thumb/Video/v4/ed/79/b0/ed79b0c0-7617-a714-15be-2378cdb58221/source/1200x630bb.jpg */
 
 #include "inode.h"
-
 #include <fstream>
 #include <stdlib.h>
 #include <sstream>
@@ -33,10 +32,10 @@ void list();
 
 void *read_file(void *arg){
 	std::ifstream opfile;
-	char* file_name = (char*)arg;
-	opfile.open(file_name);
+	char* thread_name = (char*)arg;
+	opfile.open(thread_name);
 	if(!opfile){
-		perror(file_name);
+		perror(thread_name);
 		pthread_exit(NULL);
 	}
 	//print lines of the file, don't delete yet
@@ -50,21 +49,21 @@ void *read_file(void *arg){
 		if(command == "CREATE"){
 			line_stream >> ssfs_file;
 			std::cout << "Creating " << ssfs_file << std::endl;
-			//disk.create(ssfs_file);
+			//create(ssfs_file);
 		}else if(command == "IMPORT"){
 			line_stream >> ssfs_file;
 			std::string unix_file;
 			line_stream >> unix_file;
 			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
-			//disk.import(ssfs_file,unix_file);
+			//import(ssfs_file,unix_file);
 		}else if(command == "CAT"){
 			line_stream >> ssfs_file;
 			std::cout << "Contents of " << ssfs_file << std::endl;
-			//disk.cat(ssfs_file);
+			//cat(ssfs_file);
 		}else if(command == "DELETE"){
 			line_stream >> ssfs_file;
 			std::cout << "Deleting " << ssfs_file << std::endl;
-			//disk.delete(ssfs_file);
+			//deleteFile(ssfs_file);
 		}else if(command == "WRITE"){
 			line_stream >> ssfs_file;
 			char c;
@@ -73,19 +72,20 @@ void *read_file(void *arg){
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
 			std::cout << "Writing character '" << c << "' into "<< ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			//disk.write(ssfs_file,character,start_byte,num_bytes);
+			//write(ssfs_file,character,start_byte,num_bytes);
 		}else if(command == "READ"){
 			line_stream >> ssfs_file;
 			int start_byte, num_bytes;
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
 			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			//disk.read(ssfs_file,start_byte,num_bytes);
+			//read(ssfs_file,start_byte,num_bytes);
 		}else if(command == "LIST"){
 			std::cout << "Listing" << std::endl;
-			//disk.list();
+			//list();
 		}else if(command == "SHUTDOWN"){
-			std::cout << "Shutting down " << file_name << "..." << std::endl;
+			std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
+			//shutdown();
 			pthread_exit(NULL);
 		}else {
 			std::cout << line << ": command not found" << std::endl;
