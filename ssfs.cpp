@@ -213,15 +213,17 @@ void build_free_block_list() {
 
 
 void deleteFile(std::string fileName){
-    //Get the inode from the inode map using fileName as the key
-	//int target = inodeMap[fileName];
-    //return the blocks to the freelist
-	//
-	//target.indirectblocks clear
-	//target.directblocks clear
+/*    //Get the inode from the inode map using fileName as the key
+	int targetBlock = inodeMap[fileName];
+    return the blocks to the freelist
+	char * buffer = new char[block_size];
+	int offset = (targetBlock-1)*block_size;
+	buffer = fseek(disk_file_name,offset,SEEK_SET);
+	inode myNode = buffer;
+	int fileSize = myNode.file_size;
     //remove the inode from the inode map
-	//free_block_list.push_back(target);
-	//inodemap.erase(fileName)
+	free_block_list.push_back(target);
+	//inodemap.erase(fileName)*/
 }
 
 void list(){
@@ -276,16 +278,28 @@ int createFile(std::string fileName){
 		cout<< "create command failed, file named " << fileName << " already exists." << endl;
 	}else{
 		if(!free_block_list.empty()){
-			int targetblock == free_block_list.front()
+			if(free_block_list.front() <= 260){
+				int targetblock == free_block_list.front()
+			}else{
+				cout<<"create command failed, there is no room left on the inodeMap for " << filename << endl;
+			}
 			write inode data to the targetblock
 			inode_map[fileName] = targetblock;
+			inode myNode(fileName,0);
+			char * buffer = new char[block_size];
+			buffer = myNode;
+			inode_map[fileName] = buffer;
 		}else{
-		cout<<"create command failed, there is no room left on the disk for " << filename << endl;
+			cout<<"create command failed, there is no room left on the disk for " << filename << endl;
 		}
 	}*/
 }
 void ssfsCat(std::string fileName){
-	//int targetBlock = inode_map[fileName];
-	//int fileSize = (parse targetblock for file size)
-	//read(fileName, 0, fileSize);
+	/*int targetBlock = inode_map[fileName];
+	char * buffer = new char[block_size];
+	int offset = (targetBlock-1)*block_size;
+	buffer = fseek(disk_file_name,offset,SEEK_SET);
+	inode myNode = buffer;
+	int fileSize = myNode.file_size;
+	read(fileName, 0, fileSize);*/
 }
