@@ -27,7 +27,7 @@ int createFile(std::string fileName);
 void deleteFile(std::string fileName);
 bool write(std::string fname, char to_write, int start_byte, int num_bytes);
 void read(std::string fname, int start_byte, int num_bytes);
-
+void ssfsCat(std::string fileName);
 void list();
 //bool insert(*inode lilwayne);
 
@@ -283,4 +283,9 @@ int createFile(std::string fileName){
 		cout<<"create command failed, there is no room left on the disk for " << filename << endl;
 		}
 	}*/
+}
+void ssfsCat(std::string fileName){
+	//int targetBlock = inode_map[fileName];
+	//int fileSize = (parse targetblock for file size)
+	//read(fileName, 0, fileSize);
 }
