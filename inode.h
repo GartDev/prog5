@@ -14,6 +14,6 @@ class inode {
         std::string file_name;
         int file_size;
         int direct_blocks [12];
-        int * indirect_block;
-	int ** double_indirect_block;
+        std::vector<int> indirect_blocks(12);
+	std::vector<int> double_indirect_blocks(12);
 };
