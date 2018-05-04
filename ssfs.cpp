@@ -213,17 +213,36 @@ void build_free_block_list() {
 
 
 void deleteFile(std::string fileName){
-/*    //Get the inode from the inode map using fileName as the key
-	int targetBlock = inodeMap[fileName];
-    return the blocks to the freelist
+    //Get the inode from the inode map using fileName as the key
+	int targetBlock = inode_map[fileName];
+    //return the blocks to the freelist
 	char * buffer = new char[block_size];
 	int offset = (targetBlock-1)*block_size;
-	buffer = fseek(disk_file_name,offset,SEEK_SET);
+	FILE * pfile;
+	const char * diskfile = disk_file_name.c_str();
+	pfile= fopen(diskfile,"r");
+	fseek(pfile,offset,SEEK_SET);
+	fgets(buffer,block_size,pfile);
 	inode myNode = buffer;
 	int fileSize = myNode.file_size;
+	if(!myNode.double_indirect_blocks.empty()){
+		for(int i = 0; i<sizeof(myNode.double_indirect_blocks); i++){
+			free_block_list.push_back(myNode.double_indirect_blocks[i]);
+		}
+	}
+	if(!myNode.indirect_blocks.empty()){
+		for(int i = 0; i<sizeof(myNode.indirect_block); i++){
+			free_block_list.push_back(myNode.indirect_blocks[i]);
+		}
+	}
+	if(!myNode.direct_blocks.empty()){
+		for(int i = 0; i<sizeof(myNode.direct_blocks); i++){
+			free_block_list.push_back(myNode.direct_blocks[i]);
+		}
+	}
     //remove the inode from the inode map
-	free_block_list.push_back(target);
-	//inodemap.erase(fileName)*/
+	inode_map.erase(fileName);
+	free_block_list.push_back(targetBlock);
 }
 
 void list(){
@@ -270,7 +289,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 	std::strcpy (cstr, disk_file_name.disk_name_c)
 	FILE * open_disk = fopen(disk_name_c, "rb")
 	fseek(open_disk, (inode_pos-1)*block_size, SEEK_SET)
-	char * inode_raw = fscanf(open_disk, 
+	char * inode_raw = fscanf(open_disk,
 	inode inode = (inode*)inode_raw;
 
 
@@ -285,32 +304,48 @@ void read(std::string fname, int start_byte, int num_bytes){
 	}*/
 }
 int createFile(std::string fileName){
-	/*if(inode_map.count(fileName)==1){
-		cout<< "create command failed, file named " << fileName << " already exists." << endl;
+	if(inode_map.count(fileName)==1){
+		std::cerr<< "create command failed, file named " << fileName << " already exists." << "\n";
 	}else{
 		if(!free_block_list.empty()){
-			if(free_block_list.front() <= 260){
-				int targetblock == free_block_list.front()
-			}else{
-				cout<<"create command failed, there is no room left on the inodeMap for " << filename << endl;
+			int targetblock = 0;
+			for(int i = 0;i<free_block_list.size();++i){
+				if(free_block_list[i] <= 260){
+					int targetblock = free_block_list[i];
+					break;
+				}
 			}
-			write inode data to the targetblock
-			inode_map[fileName] = targetblock;
-			inode myNode(fileName,0);
-			char * buffer = new char[block_size];
-			buffer = myNode;
-			inode_map[fileName] = buffer;
+			if(!targetblock == 0){
+				//write inode data to the targetblock
+				inode_map[fileName] = targetblock;
+				inode myNode(fileName,0);
+				char * buffer = new char[block_size];
+				buffer = myNode;
+				int offset = (targetblock-1)*block_size;
+				FILE * pfile;
+				const char * diskfile = disk_file_name.c_str();
+				pfile= fopen(diskfile,"w");
+				fseek(pfile,offset,SEEK_SET);
+				fputs(buffer,pfile);
+
+			}else{
+				std::cerr<<"create command failed, there is no room left on the inodeMap for " << fileName << "\n";
+			}
 		}else{
-			cout<<"create command failed, there is no room left on the disk for " << filename << endl;
+			std::cerr<<"create command failed, there is no room left on the disk for " << fileName << "\n";
 		}
-	}*/
+	}
 }
 void ssfsCat(std::string fileName){
-	/*int targetBlock = inode_map[fileName];
+	int targetBlock = inode_map[fileName];
 	char * buffer = new char[block_size];
 	int offset = (targetBlock-1)*block_size;
-	buffer = fseek(disk_file_name,offset,SEEK_SET);
+	FILE * pfile;
+	const char * diskfile = disk_file_name.c_str();
+	pfile= fopen(diskfile,"r");
+	fseek(pfile,offset,SEEK_SET);
+	fgets(buffer,block_size,pfile);
 	inode myNode = buffer;
 	int fileSize = myNode.file_size;
-	read(fileName, 0, fileSize);*/
+	read(fileName, 0, fileSize);
 }
