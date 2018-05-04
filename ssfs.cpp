@@ -2,6 +2,7 @@
 
 #include "inode.h"
 #include <fstream>
+#include <limits>
 #include <stdlib.h>
 #include <sstream>
 #include <pthread.h>
@@ -16,11 +17,13 @@ int num_blocks;
 int block_size;
 int files_in_system;
 std::map<std::string, int> inode_map;
-std::vector<int> free_block_list;
+int * free_block_list;
 
 void get_system_parameters();
 void build_inode_map();
 void build_free_block_list();
+
+std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 int createFile(std::string fileName);
 void deleteFile(std::string fileName);
@@ -29,6 +32,8 @@ void read(std::string fname, int start_byte, int num_bytes);
 void ssfsCat(std::string fileName);
 void list();
 //bool insert(*inode lilwayne);
+
+void shutdown_globals();
 
 void *read_file(void *arg){
 	std::ifstream opfile;
@@ -102,10 +107,12 @@ int main(int argc, char **argv){
 	}
 
 	disk_file_name = std::string(argv[1]);
-
 	get_system_parameters();
+	free_block_list = new int[num_blocks+1];
 	build_free_block_list();
-	build_inode_map();
+	//build_inode_map();
+
+	shutdown_globals();
 /*
 	inode * s = new inode("sample.txt", 128);
 
@@ -147,6 +154,14 @@ int main(int argc, char **argv){
 	pthread_exit(NULL);
 }
 
+std::fstream& go_to_line(std::fstream& file, unsigned int num){
+    file.seekg(std::ios::beg);
+    for(int i=0; i < num - 1; ++i){
+        file.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+    }
+    return file;
+}
+
 // File System startup scan below --------
 
 void get_system_parameters() {
@@ -179,13 +194,13 @@ void build_inode_map() {
 		line = line.substr(line.find(' ')+1, line.length());
 	}
 
+	disk.close();
 }
 
 void build_free_block_list() {
 	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 
 	std::string num;
-	getline(disk, num, '\n');
 	getline(disk, num, '\n');
 	getline(disk, num, '\n');
 
@@ -198,19 +213,20 @@ void build_free_block_list() {
 
 			int i;
 			for (i = start; i <= end; i++) {
-				free_block_list.push_back(i);
+				free_block_list[i] = 1;
 			}
 
 		} else {
-			free_block_list.push_back(std::stoi(cur));
+			free_block_list[std::stoi(cur)] = 1;
 
 		}
 		num = num.substr(num.find(' ')+1, num.length());
 	}
+
+	disk.close();
 }
 
 // Disk Ops below ------------------------
-
 
 void deleteFile(std::string fileName){
     //Get the inode from the inode map using fileName as the key
@@ -363,4 +379,61 @@ void ssfsCat(std::string fileName){
 	inode myNode = inode_map[fileName];
 	int fileSize = myNode.file_size;
 	read(fileName, 0, fileSize);
+}
+
+void shutdown_globals() {
+	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
+
+//	go_to_line(disk, 1);
+
+	disk.seekp(std::ios_base::beg);
+
+	std::string num_blocks_s = std::to_string(num_blocks);
+	std::string block_size_s = std::to_string(block_size);
+	std::string files_in_system_s = std::to_string(files_in_system);
+
+	disk.write(num_blocks_s.c_str(), num_blocks_s.length()*sizeof(char));
+	disk.write(" ", sizeof(char));
+	disk.write(block_size_s.c_str(), block_size_s.length()*sizeof(char));
+	disk.write(" ", sizeof(char));
+	disk.write(files_in_system_s.c_str(), files_in_system_s.length()*sizeof(char));
+	disk.write("\n", sizeof(char));
+/*
+	free_block_list = {1, 2, 3, 4, 5, 90, 1002, 1003, 1004, 1009, 1010};
+
+	int i;
+	if (free_block_list.size() > 1) {
+		int dash = 0;
+		for (i = 0 ; i < free_block_list.size()-1 ; i++) {
+			int first = free_block_list[i];
+			int prev = free_block_list[i];
+			int next = free_block_list[i+1];
+			while (next == prev+1 and i < free_block_list.size()-1) {
+				dash = 1;
+				i++;
+				next = free_block_list[i+1];
+				prev = free_block_list[i];
+			}
+
+			disk.write(std::to_string(first).c_str(), std::to_string(first).length()*sizeof(char));
+			if (dash) {
+				disk.write("-", sizeof(char));
+				disk.write(std::to_string(prev).c_str(), std::to_string(prev).length()*sizeof(char));
+				i++;
+			}
+
+			disk.write(" ", sizeof(char)); 
+			dash = 0;
+		}
+	} else if (free_block_list.size() == 1) {
+		disk.write(std::to_string(free_block_list[0]).c_str(), std::to_string(free_block_list[0]).length()*sizeof(char));
+	}
+
+	disk.write("\n", sizeof(char));
+*/
+
+
+	
+
+	disk.close();
 }
