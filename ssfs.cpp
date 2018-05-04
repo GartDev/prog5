@@ -19,10 +19,10 @@ std::map<std::string, int> inode_map;
 int free_block_list[512];
 
 void get_system_parameters();
-void build_inode_map(); 
+void build_inode_map();
 void build_free_block_list();
 
-//*inode createFile(string fileName,int flag);
+int createFile(std::string fileName);
 void deleteFile(std::string fileName);
 bool write(std::string fname, char to_write, int start_byte, int num_bytes);
 void read(std::string fname, int start_byte, int num_bytes);
@@ -149,7 +149,7 @@ int main(int argc, char **argv){
 // File System startup scan below --------
 
 void get_system_parameters() {
-	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary); 
+	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 
 	std::string line;
 	getline(disk, line, ' ');
@@ -164,13 +164,16 @@ void get_system_parameters() {
 
 // Disk Ops below ------------------------
 
+
 void deleteFile(std::string fileName){
     //Get the inode from the inode map using fileName as the key
-	//inode target = inodeMap[fileName]
+	//int target = inodeMap[fileName];
     //return the blocks to the freelist
+	//
 	//target.indirectblocks clear
 	//target.directblocks clear
     //remove the inode from the inode map
+	//free_block_list.push_back(target);
 	//inodemap.erase(fileName)
 }
 
@@ -178,17 +181,19 @@ void list(){
 	//for each element in inodemap, display the inode->name and inode->size
 	//map<string,int>::iterator it = map.begin();
 	//string fileName;
-	//int block;
-		//while(it!= map.end(){
+	//int inodeBlock;
+	//int fileSize;
+		//while(it!= map.end()){
 		//fileName = it -> first;
-		//fileSize = it -> second;
-		//cout << "Name: " << fileName << "::Size: "<< filesize << " bytes" << endl;
+		//inodeBlock = it -> second;
+		//parse inodeblock for filesize = fileSize;
+		//cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes" << endl;
 //
 }
 
 bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 //	inode inode = inode_map[fname];
-		
+
 	//check file size, return error if start_byte is out of bounds
 //	int current_size = inode.file_size;
 //	if(current_size < start_byte){
@@ -203,13 +208,13 @@ bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 		//expand the file
 		}
 //	}
-	
+
 }
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
 
-//	inode inode = INODE_MAP[fname]	
+//	inode inode = INODE_MAP[fname]
 //	int current_size = inode.file_size;
 	int real_read_length = num_bytes;
 //	if(current_size < start_byte){
@@ -219,4 +224,17 @@ void read(std::string fname, int start_byte, int num_bytes){
 //		real_read_length =(num_bytes - ((start_byte + num_bytes) >
 //		 inode.file_size));
 //	}
+}
+int createFile(std::string fileName){
+	/*if(inode_map.count(fileName)==1){
+		cout<< "create command failed, file named " << fileName << " already exists." << endl;
+	}else{
+		if(!free_block_list.empty()){
+			int targetblock == free_block_list.front()
+			write inode data to the targetblock
+			inode_map[fileName] = targetblock;
+		}else{
+		cout<<"create command failed, there is no room left on the disk for " << filename << endl;
+		}
+	}*/
 }
