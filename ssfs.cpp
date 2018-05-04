@@ -7,6 +7,7 @@
 #include <sstream>
 #include <pthread.h>
 #include <map>
+#include <vector>
 
 pthread_cond_t fill, empty;
 pthread_mutex_t mutex;
@@ -16,7 +17,7 @@ int num_blocks;
 int block_size;
 int files_in_system;
 std::map<std::string, int> inode_map;
-int free_block_list[512];
+std::vector<int> free_block_list;
 
 void get_system_parameters();
 void build_inode_map(); 
@@ -103,8 +104,8 @@ int main(int argc, char **argv){
 	disk_file_name = std::string(argv[1]);
 
 	get_system_parameters();
-//	build_inode_map();
-
+	build_free_block_list();
+	build_inode_map();
 /*
 	inode * s = new inode("sample.txt", 128);
 
@@ -156,10 +157,56 @@ void get_system_parameters() {
 	num_blocks = std::stoi(line);
 	getline(disk, line, ' ');
 	block_size = std::stoi(line);
-	getline(disk, line, '|');
+	getline(disk, line, '\n');
 	files_in_system = std::stoi(line);
 
 	disk.close();
+}
+
+void build_inode_map() {
+	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
+
+	std::string line;
+	getline(disk, line, '\n');
+	getline(disk, line, '\n');
+
+	while (line.length() != 0) {
+		std::string cur = line.substr(0, line.find(' '));
+
+		int colon = cur.find(':');
+
+		inode_map[cur.substr(0, colon)] = std::stoi(cur.substr(colon+1, cur.length()));
+		line = line.substr(line.find(' ')+1, line.length()); 
+	}
+
+}
+
+void build_free_block_list() {
+	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
+
+	std::string num;
+	getline(disk, num, '\n');
+	getline(disk, num, '\n');
+	getline(disk, num, '\n');
+
+	while (num.length() != 0) {	
+		std::string cur = num.substr(0, num.find(' '));
+		if (num.find('-') != std::string::npos) {
+			int dash = cur.find('-');
+			int start = std::stoi(cur.substr(0, dash));
+			int end = std::stoi(cur.substr(dash+1, cur.length()));
+
+			int i;
+			for (i = start; i <= end; i++) {
+				free_block_list.push_back(i);
+			}
+
+		} else {
+			free_block_list.push_back(std::stoi(cur));
+
+		}
+		num = num.substr(num.find(' ')+1, num.length());
+	}
 }
 
 // Disk Ops below ------------------------
@@ -203,7 +250,6 @@ bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 		//expand the file
 		}
 //	}
-	
 }
 
 void read(std::string fname, int start_byte, int num_bytes){
