@@ -47,7 +47,9 @@ int main(int argc, char * argv[ ]) {
 	}
 
 	// writing disk parameters and other cool stuff to top
-	std::ofstream disk_output(disk_file_name, std::ios::out | std::ios::binary);
+//	std::ofstream disk_output(disk_file_name, std::ios::out | std::ios::binary);
+
+	FILE * disk_output = fopen(disk_file_name.c_str(), "wb");
 	truncate(disk_file_name.c_str(), num_blocks*block_size);
 
 	std::string num_blocks_s = std::to_string(num_blocks);
@@ -56,41 +58,38 @@ int main(int argc, char * argv[ ]) {
 	const char * num_blocks_c = num_blocks_s.c_str();
 	const char * block_size_c = block_size_s.c_str();
 
+
 	// DISK BLOCK SYNTAX: BLOCKS ARE REPRESENTED BY LINES, SO BLOCK 1 IS THE FIRST
 	// LINE, BLOCK 2 IS THE SECOND, ETC.
 
 	// LINE (BLOCK) 1 HAS THE DISK DATA INCLUDING PARAMETERS,
 	// INODE MAP, AND FREE BLOCK LIST
 
-	// PART 1 OF DISK: PARAMETERS
+	// LINE 1 OF DISK: PARAMETERS
 	// format: "num_blocks block_size files_in_system"
 	// num blocks, a space, block size, a space, number of files in the system
-	disk_output.write(num_blocks_c, num_blocks_s.length()*sizeof(char));
-	disk_output.write(" ", sizeof(char));
-	disk_output.write(block_size_c, block_size_s.length()*sizeof(char));
-	disk_output.write(" 0", 2*sizeof(char));
+	fwrite(num_blocks_c, sizeof(char), num_blocks_s.length(), disk_output);
+	fwrite(" ", sizeof(char), 1, disk_output);
+	fwrite(block_size_c, sizeof(char), block_size_s.length(), disk_output);
+	fwrite(" 0\n", sizeof(char), 3, disk_output);
 
-	disk_output.write("|", sizeof(char));
-
-	// PART 2 OF DISK: INODE MAP
+	// LINE 2 OF DISK: INODE MAP
 	// format: "file_name:inode_location file_name2:inode_location ..."
 	// file name followed by : followed by its location. files are 
 	// separated by spaces. still deciding how to represent location
-	disk_output.write("sam:loc", 7*sizeof(char));
+	fwrite("sam:loc\n", sizeof(char), 8, disk_output);
 
-	disk_output.write("|", sizeof(char));
-
-	// PART 3 OF DISK: FREE BLOCKS
+	// LINE 3 OF DISK: FREE BLOCKS
 	// format: "<block#>-<block#> <block#>-<block#> ..."
 	// list of block numbers that are free, 1-4 means that
 	// blocks 1, 2, 3, and 4 are free but not 5, etc..
-	disk_output.write("2-", 2*sizeof(char));
-	disk_output.write(num_blocks_c, num_blocks_s.length()*sizeof(char));
+	fwrite("2-", sizeof(char), 2, disk_output);
+	fwrite(num_blocks_c, sizeof(char), num_blocks_s.length(), disk_output);
 
-	disk_output.write("\n", sizeof(char));
+	fwrite(" \n", sizeof(char), 2, disk_output);
 
 	// close disk
-	disk_output.close();
+	fclose(disk_output);
 
 	return 0;
 }
