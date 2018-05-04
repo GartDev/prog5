@@ -3,6 +3,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <string.h>
+#include <vector>
 
 class inode {
     public:
