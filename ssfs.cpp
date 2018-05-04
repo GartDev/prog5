@@ -214,7 +214,7 @@ void build_free_block_list() {
 
 void deleteFile(std::string fileName){
     //Get the inode from the inode map using fileName as the key
-	int targetBlock = inode_map[fileName];
+	/*int targetBlock =
     //return the blocks to the freelist
 	char * buffer = new char[block_size];
 	int offset = (targetBlock-1)*block_size;
@@ -222,22 +222,31 @@ void deleteFile(std::string fileName){
 	const char * diskfile = disk_file_name.c_str();
 	pfile= fopen(diskfile,"r");
 	fseek(pfile,offset,SEEK_SET);
-	fgets(buffer,block_size,pfile);
-	inode myNode = buffer;
+	fgets(buffer,block_size,pfile);*/
+	inode myNode = inode_map[fileName];
 	int fileSize = myNode.file_size;
+	bool isempty = 1;//used for direct blocks, in an array
+	int sum = 0;
+	for(int i = 0; i<sizeof(myNode.direct_blocks);i++){
+		sum+= myNode.direct_blocks[i];
+	}
+	if(sum != 0){
+		isempty = 0;
+	}
 	if(!myNode.double_indirect_blocks.empty()){
 		for(int i = 0; i<sizeof(myNode.double_indirect_blocks); i++){
+			
 			free_block_list.push_back(myNode.double_indirect_blocks[i]);
 		}
 	}
 	if(!myNode.indirect_blocks.empty()){
-		for(int i = 0; i<sizeof(myNode.indirect_block); i++){
+		for(int i = 0; i<sizeof(myNode.indirect_blocks); i++){
 			free_block_list.push_back(myNode.indirect_blocks[i]);
 		}
 	}
-	if(!myNode.direct_blocks.empty()){
-		for(int i = 0; i<sizeof(myNode.direct_blocks); i++){
-			free_block_list.push_back(myNode.direct_blocks[i]);
+	if(isempty == 1){
+			for(int i = 0; i<sizeof(myNode.direct_blocks); i++){
+				free_block_list.push_back(myNode.direct_blocks[i]);
 		}
 	}
     //remove the inode from the inode map
@@ -304,23 +313,26 @@ void read(std::string fname, int start_byte, int num_bytes){
 	}*/
 }
 int createFile(std::string fileName){
-	if(inode_map.count(fileName)==1){
+	/*if(inode_map.count(fileName)==1){
 		std::cerr<< "create command failed, file named " << fileName << " already exists." << "\n";
+		return(0);
 	}else{
 		if(!free_block_list.empty()){
 			int targetblock = 0;
 			for(int i = 0;i<free_block_list.size();++i){
-				if(free_block_list[i] <= 260){
+				if(free_block_list[i] <= 262){
 					int targetblock = free_block_list[i];
 					break;
 				}
 			}
 			if(!targetblock == 0){
 				//write inode data to the targetblock
-				inode_map[fileName] = targetblock;
+
 				inode myNode(fileName,0);
+				inode_map[fileName] = myNode;
 				char * buffer = new char[block_size];
 				buffer = myNode;
+				//calculate targetblock when u can
 				int offset = (targetblock-1)*block_size;
 				FILE * pfile;
 				const char * diskfile = disk_file_name.c_str();
@@ -330,22 +342,25 @@ int createFile(std::string fileName){
 
 			}else{
 				std::cerr<<"create command failed, there is no room left on the inodeMap for " << fileName << "\n";
+				return(0);
 			}
 		}else{
 			std::cerr<<"create command failed, there is no room left on the disk for " << fileName << "\n";
+			return(0);
 		}
 	}
+	return(1);*/
 }
 void ssfsCat(std::string fileName){
-	int targetBlock = inode_map[fileName];
+	/*int targetBlock
 	char * buffer = new char[block_size];
 	int offset = (targetBlock-1)*block_size;
 	FILE * pfile;
 	const char * diskfile = disk_file_name.c_str();
 	pfile= fopen(diskfile,"r");
 	fseek(pfile,offset,SEEK_SET);
-	fgets(buffer,block_size,pfile);
-	inode myNode = buffer;
+	fgets(buffer,block_size,pfile);*/
+	inode myNode = inode_map[fileName];
 	int fileSize = myNode.file_size;
 	read(fileName, 0, fileSize);
 }

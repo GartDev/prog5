@@ -16,5 +16,5 @@ class inode {
         int file_size;
         int direct_blocks [12];
         int indirect_blocks [12];
-	int double_indirect_blocks [12];
+	    int double_indirect_blocks [12];
 };
