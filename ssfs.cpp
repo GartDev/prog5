@@ -1,7 +1,6 @@
 /* https://is2-ssl.mzstatic.com/image/thumb/Video/v4/ed/79/b0/ed79b0c0-7617-a714-15be-2378cdb58221/source/1200x630bb.jpg */
 
 #include "inode.h"
-
 #include <fstream>
 #include <limits>
 #include <stdlib.h>
@@ -38,10 +37,10 @@ void shutdown_globals();
 
 void *read_file(void *arg){
 	std::ifstream opfile;
-	char* file_name = (char*)arg;
-	opfile.open(file_name);
+	char* thread_name = (char*)arg;
+	opfile.open(thread_name);
 	if(!opfile){
-		perror(file_name);
+		perror(thread_name);
 		pthread_exit(NULL);
 	}
 	//print lines of the file, don't delete yet
@@ -55,21 +54,21 @@ void *read_file(void *arg){
 		if(command == "CREATE"){
 			line_stream >> ssfs_file;
 			std::cout << "Creating " << ssfs_file << std::endl;
-			//disk.create(ssfs_file);
+			//create(ssfs_file);
 		}else if(command == "IMPORT"){
 			line_stream >> ssfs_file;
 			std::string unix_file;
 			line_stream >> unix_file;
 			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
-			//disk.import(ssfs_file,unix_file);
+			//import(ssfs_file,unix_file);
 		}else if(command == "CAT"){
 			line_stream >> ssfs_file;
 			std::cout << "Contents of " << ssfs_file << std::endl;
-			//disk.cat(ssfs_file);
+			//cat(ssfs_file);
 		}else if(command == "DELETE"){
 			line_stream >> ssfs_file;
 			std::cout << "Deleting " << ssfs_file << std::endl;
-			//disk.delete(ssfs_file);
+			//deleteFile(ssfs_file);
 		}else if(command == "WRITE"){
 			line_stream >> ssfs_file;
 			char c;
@@ -78,19 +77,20 @@ void *read_file(void *arg){
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
 			std::cout << "Writing character '" << c << "' into "<< ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			//disk.write(ssfs_file,character,start_byte,num_bytes);
+			//write(ssfs_file,character,start_byte,num_bytes);
 		}else if(command == "READ"){
 			line_stream >> ssfs_file;
 			int start_byte, num_bytes;
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
 			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			//disk.read(ssfs_file,start_byte,num_bytes);
+			//read(ssfs_file,start_byte,num_bytes);
 		}else if(command == "LIST"){
 			std::cout << "Listing" << std::endl;
-			//disk.list();
+			//list();
 		}else if(command == "SHUTDOWN"){
-			std::cout << "Shutting down " << file_name << "..." << std::endl;
+			std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
+			//shutdown();
 			pthread_exit(NULL);
 		}else {
 			std::cout << line << ": command not found" << std::endl;
@@ -229,15 +229,17 @@ void build_free_block_list() {
 // Disk Ops below ------------------------
 
 void deleteFile(std::string fileName){
-    //Get the inode from the inode map using fileName as the key
-	//int target = inodeMap[fileName];
-    //return the blocks to the freelist
-	//
-	//target.indirectblocks clear
-	//target.directblocks clear
+/*    //Get the inode from the inode map using fileName as the key
+	int targetBlock = inodeMap[fileName];
+    return the blocks to the freelist
+	char * buffer = new char[block_size];
+	int offset = (targetBlock-1)*block_size;
+	buffer = fseek(disk_file_name,offset,SEEK_SET);
+	inode myNode = buffer;
+	int fileSize = myNode.file_size;
     //remove the inode from the inode map
-	//free_block_list.push_back(target);
-	//inodemap.erase(fileName)
+	free_block_list.push_back(target);
+	//inodemap.erase(fileName)*/
 }
 
 void list(){
@@ -275,35 +277,58 @@ bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
+/*
+	int inode_pos = INODE_MAP[fname];
 
-//	inode inode = INODE_MAP[fname]
-//	int current_size = inode.file_size;
+
+	//construct the inode from the data in DISK
+	char * disk_name_c = new char [disk_file_name.length()+1]
+	std::strcpy (cstr, disk_file_name.disk_name_c)
+	FILE * open_disk = fopen(disk_name_c, "rb")
+	fseek(open_disk, (inode_pos-1)*block_size, SEEK_SET)
+	char * inode_raw = fscanf(open_disk, 
+	inode inode = (inode*)inode_raw;
+
+
+	int current_size = inode.file_size;
 	int real_read_length = num_bytes;
-//	if(current_size < start_byte){
+	if(current_size < start_byte){
 		std::cout << "Start byte is out of range" << std::endl;
-//	}
-//	if((start_byte + num_bytes) > inode.file_size){
-//		real_read_length =(num_bytes - ((start_byte + num_bytes) >
-//		 inode.file_size));
-//	}
+	}
+	if((start_byte + num_bytes) > inode.file_size){
+		real_read_length =(num_bytes - ((start_byte + num_bytes) >
+		 inode.file_size));
+	}*/
 }
 int createFile(std::string fileName){
 	/*if(inode_map.count(fileName)==1){
 		cout<< "create command failed, file named " << fileName << " already exists." << endl;
 	}else{
 		if(!free_block_list.empty()){
-			int targetblock == free_block_list.front()
+			if(free_block_list.front() <= 260){
+				int targetblock == free_block_list.front()
+			}else{
+				cout<<"create command failed, there is no room left on the inodeMap for " << filename << endl;
+			}
 			write inode data to the targetblock
 			inode_map[fileName] = targetblock;
+			inode myNode(fileName,0);
+			char * buffer = new char[block_size];
+			buffer = myNode;
+			inode_map[fileName] = buffer;
 		}else{
-		cout<<"create command failed, there is no room left on the disk for " << filename << endl;
+			cout<<"create command failed, there is no room left on the disk for " << filename << endl;
 		}
 	}*/
 }
 void ssfsCat(std::string fileName){
-	//int targetBlock = inode_map[fileName];
-	//int fileSize = (parse targetblock for file size)
-	//read(fileName, 0, fileSize);
+	/*int targetBlock = inode_map[fileName];
+	char * buffer = new char[block_size];
+	int offset = (targetBlock-1)*block_size;
+	buffer = fseek(disk_file_name,offset,SEEK_SET);
+	inode myNode = buffer;
+	int fileSize = myNode.file_size;
+	read(fileName, 0, fileSize);*/
 }
 
 void shutdown_globals() {
