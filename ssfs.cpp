@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <map>
 #include <vector>
-//getline from
+
 pthread_cond_t fill, empty;
 pthread_mutex_t mutex;
 
@@ -266,21 +266,22 @@ void deleteFile(std::string fileName){
 		}
 	}
     //remove the inode from the inode map
+	targetBlock = inodeMap[fileName].location;
 	inode_map.erase(fileName);
 	free_block_list.push_back(targetBlock);
 }
 
 void list(){
 	//for each element in inodemap, display the inode->name and inode->size
-	//map<string,int>::iterator it = map.begin();
-	//string fileName;
-	//int inodeBlock;
-	//int fileSize;
-		//while(it!= map.end()){
-		//fileName = it -> first;
-		//inodeBlock = it -> second;
-		//parse inodeblock for filesize = fileSize;
-		//cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes" << endl;
+	map<string,inode>::iterator it = inode_map.begin();
+	string fileName;
+	inode myNode;
+	int fileSize;
+		while(it!= inode_map.end()){
+		fileName = it -> first;
+		myNode = it -> second;
+		fileSize = myNode.file_size;
+		cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes\n";
 //
 }
 
@@ -329,7 +330,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 	}*/
 }
 int createFile(std::string fileName){
-	/*if(inode_map.count(fileName)==1){
+	if(inode_map.count(fileName)==1){
 		std::cerr<< "create command failed, file named " << fileName << " already exists." << "\n";
 		return(0);
 	}else{
@@ -344,17 +345,7 @@ int createFile(std::string fileName){
 			if(!targetblock == 0){
 				//write inode data to the targetblock
 
-				inode myNode(fileName,0);
-				inode_map[fileName] = myNode;
-				char * buffer = new char[block_size];
-				buffer = myNode;
-				//calculate targetblock when u can
-				int offset = (targetblock-1)*block_size;
-				FILE * pfile;
-				const char * diskfile = disk_file_name.c_str();
-				pfile= fopen(diskfile,"w");
-				fseek(pfile,offset,SEEK_SET);
-				fputs(buffer,pfile);
+				inode myNode
 
 			}else{
 				std::cerr<<"create command failed, there is no room left on the inodeMap for " << fileName << "\n";
