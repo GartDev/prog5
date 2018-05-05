@@ -18,8 +18,8 @@ std::string disk_file_name;
 int num_blocks;
 int block_size;
 int files_in_system;
-std::string free_block_list;
 std::map<std::string, inode> inode_map;
+std::string free_block_list;
 
 void get_system_parameters();
 void build_inode_map();
@@ -28,9 +28,9 @@ void build_free_block_list();
 std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 int createFile(std::string fileName);
-void deleteFile(std::string fileName);
+//void deleteFile(std::string fileName);
 //bool write(std::string fname, char to_write, int start_byte, int num_bytes);
-void read(std::string fname, int start_byte, int num_bytes);
+//void read(std::string fname, int start_byte, int num_bytes);
 void ssfsCat(std::string fileName);
 void list();
 //bool insert(*inode lilwayne);
@@ -110,7 +110,6 @@ int main(int argc, char **argv){
 
 	disk_file_name = std::string(argv[1]);
 	get_system_parameters();
-//	free_block_list = new int[num_blocks+1];
 	build_free_block_list();
 	//build_inode_map();
 
@@ -192,7 +191,7 @@ void build_inode_map() {
 
 		int colon = cur.find(':');
 
-//		inode_map[cur.substr(0, colon)] = std::stoi(cur.substr(colon+1, cur.length()));
+	//	inode_map[cur.substr(0, colon)] = std::stoi(cur.substr(colon+1, cur.length()));
 		line = line.substr(line.find(' ')+1, line.length());
 	}
 
@@ -202,10 +201,10 @@ void build_inode_map() {
 void build_free_block_list() {
 	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 
-	free_block_list = "";
-
 	std::string num;
 	getline(disk, num, '\n');
+
+	free_block_list = "";
 
 	while (getline(disk, num, '\n') && num[0] != '\0') {
 		free_block_list += num;
@@ -240,17 +239,17 @@ void deleteFile(std::string fileName){
 	if(!myNode.double_indirect_blocks.empty()){
 		for(int i = 0; i<sizeof(myNode.double_indirect_blocks); i++){
 
-			free_block_list.push_back(myNode.double_indirect_blocks[i]);
+		//	free_block_list.push_back(myNode.double_indirect_blocks[i]);
 		}
 	}
 	if(!myNode.indirect_blocks.empty()){
 		for(int i = 0; i<sizeof(myNode.indirect_blocks); i++){
-			free_block_list.push_back(myNode.indirect_blocks[i]);
+		//	free_block_list.push_back(myNode.indirect_blocks[i]);
 		}
 	}
 	if(isempty == 1){
 			for(int i = 0; i<sizeof(myNode.direct_blocks); i++){
-				free_block_list.push_back(myNode.direct_blocks[i]);
+		//		free_block_list.push_back(myNode.direct_blocks[i]);
 		}
 	}
     //remove the inode from the inode map
@@ -267,15 +266,16 @@ void list(){
 	//inode myNode;
 	int fileSize;
 		while(it!= inode_map.end()){
-		fileName = it -> first;
-		myNode = it -> second;
+		std::string fileName = it->first;
+		inode myNode = it->second;
 		fileSize = myNode.file_size;
-		cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes\n";
+		std::cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes\n";
 //
 }*/
 
 /*bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 //	inode inode = inode_map[fname];
+}
 
 	//check file size, return error if start_byte is out of bounds
 //	int current_size = inode.file_size;
@@ -293,34 +293,26 @@ void list(){
 //	}
 }*/
 
+/*
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
 
-/*	inode inode = inode_map[fname];
+	inode myNode = inode_map[fname];
 
-
-	//construct the inode from the data in DISK
-	*char * disk_name_c = new char [disk_file_name.length()+1]
-	std::strcpy (cstr, disk_file_name.disk_name_c)
-	FILE * open_disk = fopen(disk_name_c, "rb")
-	fseek(open_disk, (inode_pos-1)*block_size, SEEK_SET)
-	char * inode_raw = fscanf(open_disk,
-	inode inode = (inode*)inode_raw;
-
-
-	int current_size = inode.file_size;
+	int current_size = myNode.file_size;
 	int real_read_length = num_bytes;
 	if(current_size < start_byte){
 		std::cout << "Start byte is out of range" << std::endl;
 	}
 	if((start_byte + num_bytes) > file_size){
 		real_read_length =((start_byte + num_bytes) - file_size);
-	}	
-	
-*/
+	}
+
 }
-/*
+*/
+
 int createFile(std::string fileName){
+	/*
 	if(inode_map.count(fileName)==1){
 		std::cerr<< "create command failed, file named " << fileName << " already exists." << "\n";
 		return(0);
@@ -335,8 +327,9 @@ int createFile(std::string fileName){
 			}
 			if(!targetblock == 0){
 				//write inode data to the targetblock
-
-				inode myNode
+				inode myNode(fileName,0);
+				inode_map[filename] = myNode;
+				inode_map[fileName].location = targetblock;
 
 			}else{
 				std::cerr<<"create command failed, there is no room left on the inodeMap for " << fileName << "\n";
@@ -348,7 +341,8 @@ int createFile(std::string fileName){
 		}
 	}
 	return(1);
-}*/
+*/}
+
 void ssfsCat(std::string fileName){
 	/*int targetBlock
 	char * buffer = new char[block_size];
@@ -360,7 +354,7 @@ void ssfsCat(std::string fileName){
 	fgets(buffer,block_size,pfile);*/
 //	inode myNode = inode_map[fileName];
 //	int fileSize = myNode.file_size;
-//	read(fileName, 0, fileSize);
+	//read(fileName, 0, fileSize);
 }
 
 void shutdown_globals() {
@@ -368,7 +362,7 @@ void shutdown_globals() {
 
 //	go_to_line(disk, 1);
 
-//	disk.seekp(std::ios_base::beg);
+	disk.seekp(std::ios_base::beg);
 
 	std::string num_blocks_s = std::to_string(num_blocks);
 	std::string block_size_s = std::to_string(block_size);
@@ -379,18 +373,8 @@ void shutdown_globals() {
 	disk.write(block_size_s.c_str(), block_size_s.length()*sizeof(char));
 	disk.write(" ", sizeof(char));
 	disk.write(files_in_system_s.c_str(), files_in_system_s.length()*sizeof(char));
-	
-	disk.seekp(disk.tellp()+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+files_in_system_s.length()+2))));
 
-	int i;
-	for (i = 0 ; i < num_blocks/block_size ; i++) {
-		int j;
-		for (j = 0 ; j < block_size-1 ; j++) {
-			const char * b = free_block_list.c_str();
-			disk.put(b[i*(block_size-1)+j]);
-		}
-		disk.write("\n", sizeof(char));
-	}
+	disk.seekp(disk.tellp()+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+files_in_system_s.length()+2))));	
 
 	int left = num_blocks - (num_blocks/block_size)*(block_size-1);
 
@@ -407,8 +391,8 @@ void shutdown_globals() {
 		if (i == block_size-1) {
 			disk.write("\n", sizeof(char));
 			loops += 1;
-			
 		}
+
 	}
 
 	left -= (loops*(block_size-1));
@@ -417,13 +401,13 @@ void shutdown_globals() {
 
 	disk.seekp(disk.tellp()+(block_size-left));
 
-
 	inode sample;
 	sample.file_name = "sample.txt";
 	sample.file_size = 128;
 	sample.location = 3+(num_blocks/block_size);
 	sample.direct_blocks.push_back(320);
 	sample.direct_blocks.push_back(990);
+
 
 	inode_map["sample.txt"] = sample;
 
