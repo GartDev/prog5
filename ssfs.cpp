@@ -186,11 +186,11 @@ void build_inode_map() {
 
 	std::string line;
 	//Skip the first 5 lines of the file from the super block
-	/*
+	
 	for(int i = 1; i < (num_blocks/block_size + 2); i++){
 		getline(disk, line, '\n');
 	}
-	*/
+
 	//seekg beginning + num_blocks + block_size many characters
 	std::cout << "what: " << (block_size)*(3+(num_blocks/(block_size-1))) << std::endl;
 	disk.seekg(block_size*(3+(num_blocks/(block_size-1)) - 1), std::ios::beg);
@@ -480,7 +480,6 @@ int add_blocks(std::string fname, int num_blocks){
 			}
 		}
 	}
-
 	return -1;
 }
 */
@@ -502,13 +501,10 @@ void shutdown_globals() {
 	disk.write(" ", sizeof(char));
 	disk.write(files_in_system_s.c_str(), files_in_system_s.length()*sizeof(char));
 
-<<<<<<< HEAD
-	disk.seekp(disk.tellp()+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+files_in_system_s.length()+2))));
-=======
 	int pos = disk.tellp();
 
 	disk.seekp(pos+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+files_in_system_s.length()+2))));
->>>>>>> d45ca971d0e63b827db34a329f85ee7b02f94d78
+
 
 	int left = num_blocks - (num_blocks/block_size)*(block_size-1);
 
