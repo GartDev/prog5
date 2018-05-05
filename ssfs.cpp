@@ -16,7 +16,7 @@ std::string disk_file_name;
 int num_blocks;
 int block_size;
 int files_in_system;
-std::map<std::string, int> inode_map;
+std::map<std::string, inode> inode_map;
 int * free_block_list;
 
 void get_system_parameters();
