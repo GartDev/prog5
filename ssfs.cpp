@@ -15,7 +15,7 @@ std::string disk_file_name;
 int num_blocks;
 int block_size;
 int files_in_system;
-std::map<std::string, int> inode_map;
+std::map<std::string, inode> inode_map;
 std::vector<int> free_block_list;
 
 void get_system_parameters();
@@ -167,16 +167,34 @@ void build_inode_map() {
 	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 
 	std::string line;
-	getline(disk, line, '\n');
-	getline(disk, line, '\n');
+	//Skip the first 5 lines of the file from the super block
+	/*
+	for(int i = 1; i < (num_blocks/block_size + 2); i++){
+		getline(disk, line, '\n');
+	}
+	*/
+	//seekg beginning + num_blocks + block_size many characters
+	disk.seekg((num_blocks + 2*block_size), std::ios::beg);
+	//12345678901234567890123456789012:FFF:FFFFF:FFFFF FFFFF FFFFF FFFFF FFFFF FFFFF FFFFF FFFFF FFFFF FFFFF FFFFF FFFFF:FFFFF:FFFFF
 
-	while (line.length() != 0) {
-		std::string cur = line.substr(0, line.find(' '));
+	int counter = 0;
+	while (getline(disk, line, '\n') && line[0] != '\0' && counter < 256) {
 
-		int colon = cur.find(':');
+		std::size_t colon = line.find(":");
+		std::string inode_file_name = line.substr(0, colon);
+		std::size_t colon2 = line.find(":",colon+1,line.length());
+		std::string inode_block = line.substr(colon, (colon2-colon));
+		std::size_t colon3 = line.find(":",colon2+1,line.length());
+		std::string file_size = line.substr(colon2, (colon3-colon2));
+		std::size_t colon4 = line.find(":",colon3+1,line.length());
+		std::string direct_blocks = line.substr(colon3, (colon4-colon3));
+		std::size_t colon5 = line.find(":",colon4+1,line.length());
+		std::string indirect_block = line.substr(colon4, (colon5-colon4));
+		std::string double_indirect_block = line.substr(colon5, line.length());
 
-		inode_map[cur.substr(0, colon)] = std::stoi(cur.substr(colon+1, cur.length()));
-		line = line.substr(line.find(' ')+1, line.length());
+		//inode_map[inode_file_name] = std::stoi(cur.substr(colon+1, cur.length()));
+		//line = line.substr(line.find(' ')+1, line.length());
+		counter++;
 	}
 
 }
