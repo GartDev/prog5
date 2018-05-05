@@ -33,7 +33,7 @@ void deleteFile(std::string fileName);
 //void read(std::string fname, int start_byte, int num_bytes);
 void ssfsCat(std::string fileName);
 void list();
-
+int atCapacity(int lineNum,int flag);
 void shutdown_globals();
 
 void *read_file(void *arg){
@@ -215,13 +215,21 @@ void build_free_block_list() {
 // Disk Ops below ------------------------
 
 void deleteFile(std::string fileName){
+/*	int directsum = 0;
 	if(!inode_map[fileName].direct_blocks.empty()){
-			for(int i = 0; i<inode_map[fileName].direct_blocks.size(); i++){
+		for(int i = 0; i<inode_map[fileName].direct_blocks.size(); i++){
+			if(inode_map[fileName].direct_blocks[i]!=0){
+				sum += 1;
 				int freeIndex = inode_map[fileName].direct_blocks[i]-1;
 				free_block_list[freeIndex]= '0';
+			}
 		}
 	}
-	if(inode_map[fileName].direct_blocks.size() == 12)
+	if(sum == 12){
+		ofstream
+		int indirectsum = 0;
+			for(i)
+	}
 	/*if(!inode_map[fileName].double_indirect_blocks.empty()){
 		for(int i = 0; i<inode_map[fileName].double_indirect_blocks.size(); i++){
 			for(int j = 0; j<inode_map[fileName].double_indirect_blocks[i].size(); j++){
@@ -235,10 +243,11 @@ void deleteFile(std::string fileName){
 			int freeIndex = inode_map[fileName].indirect_blocks[i]-1;
 			free_block_list[freeIndex]= '0';
 		}
-	}*/
+	}
 	int targetBlock = inode_map[fileName].location;
 	inode_map.erase(fileName);
 	free_block_list.push_back(targetBlock);
+	*/
 }
 
 /*
@@ -431,7 +440,7 @@ void shutdown_globals() {
 
 		disk.write("\n", sizeof(char));
 	}
- 
+
 
 	while (j < num_blocks/block_size) {
 		int i;
@@ -481,7 +490,7 @@ void shutdown_globals() {
 		disk.write(it->second.file_name.c_str(), it->second.file_name.length()*sizeof(char));
 		disk.write(":", sizeof(char));
 		seek += it->second.file_name.length()*sizeof(char) + sizeof(char);
-	
+
 		char h[5];
 		sprintf(h, "%x", it->second.location);
 
@@ -521,4 +530,46 @@ void shutdown_globals() {
 	}
 
 	disk.close();
+}
+//Returns 1 if full, 0 if not, flag = 0 for single indirect, 1 for double indirect.
+int atCapacity(int lineNum,int flag){
+	if(flag == 0){
+		int capCount = 0;
+		int capacity = block_size / sizeof(int);
+		ifstream diskFile;
+		diskFile.open(disk_file_name);
+		int pos = std::ios_base::beg + ((lineNum -1) * block_size);
+		diskFile.seekg(pos);
+		std::string ibLine;
+		getline(diskFile,ibLine,'\n');
+		std::size_t found = ibLine.find("0",0);
+		if(found != std::string::npos){
+			return(0);
+		}else{
+			return(1);
+		}
+	}else if(flag == 1){
+		int capCount = 0;
+		int capacity = block_size / sizeof(int);
+		ifstream diskFile;
+		diskFile.open(disk_file_name);
+		int pos = std::ios_base::beg + ((lineNum -1) * block_size);
+		diskFile.seekg(pos);
+		std::string ibLine;
+		getline(diskFile,ibLine,'\n');
+		std::size_t found = ibLine.find("0",0);
+		if(found != std::string::npos){
+			return(0);
+		}else{
+			std::stringstream ss(ibLine);
+			int lastidblock;
+			while(1) { 
+			   ss >> lastidblock;
+			   if(!ss)
+			      break;
+			}
+			atCapacity(lineNum,lastidblock);
+		}
+	}
+
 }
