@@ -410,9 +410,9 @@ int add_blocks(std::string fname, int num_blocks){
 		else{break;}
 
 	}
-*/
 //return false;
 }
+*/
 void shutdown_globals() {
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
@@ -430,7 +430,9 @@ void shutdown_globals() {
 	disk.write(" ", sizeof(char));
 	disk.write(files_in_system_s.c_str(), files_in_system_s.length()*sizeof(char));
 
-	disk.seekp(disk.tellp()+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+files_in_system_s.length()+2))));	
+	int pos = disk.tellp();
+
+	disk.seekp(pos+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+files_in_system_s.length()+2))));	
 
 	int left = num_blocks - (num_blocks/block_size)*(block_size-1);
 
@@ -467,26 +469,26 @@ void shutdown_globals() {
 
 	disk.seekp(std::ios_base::beg + (loops+2)*block_size + num_blocks);
 
-//	inode sample;
-//	sample.file_name = "sample.txt";
-//	sample.file_size = 128;
-//	sample.location = (loops+3)+(num_blocks/block_size);
-//	sample.direct_blocks[0] = 320;
-//	sample.direct_blocks[1] = 990;
-//	sample.direct_blocks[2] = 900;
-//	sample.double_indirect_block = 444;
-//
-//	inode sample2;
-//	sample2.file_name = "sample2.txt";
-//	sample2.file_size = 256;
-//	sample2.location = sample.location+1;
-//	sample2.direct_blocks[0] = 333;
-//	sample2.direct_blocks[1] = 991;
-//	sample2.direct_blocks[2] = 1000;
-//	sample2.indirect_block = 902;
-//
-//	inode_map["sample.txt"] = sample;
-//	inode_map["sample2.txt"] = sample2;
+	inode sample;
+	sample.file_name = "sample.txt";
+	sample.file_size = 128;
+	sample.location = (num_blocks/(block_size-1))+3;
+	sample.direct_blocks[0] = 320;
+	sample.direct_blocks[1] = 990;
+	sample.direct_blocks[2] = 900;
+	sample.double_indirect_block = 444;
+
+	inode sample2;
+	sample2.file_name = "sample2.txt";
+	sample2.file_size = 256;
+	sample2.location = sample.location+1;
+	sample2.direct_blocks[0] = 333;
+	sample2.direct_blocks[1] = 991;
+	sample2.direct_blocks[2] = 1000;
+	sample2.indirect_block = 902;
+
+	inode_map["sample.txt"] = sample;
+	inode_map["sample2.txt"] = sample2;
 
 	std::map<std::string, inode>::iterator it;
 
@@ -533,7 +535,9 @@ void shutdown_globals() {
 		disk.write(h, std::string(h).length()*sizeof(char));
 		seek += std::string(h).length()*sizeof(char);
 
-		disk.seekp(disk.tellp()+(block_size-seek));
+		int pos = disk.tellp();
+
+		disk.seekp(pos+(block_size-seek));
 	}
 
 	disk.close();
