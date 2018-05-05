@@ -421,6 +421,18 @@ void shutdown_globals() {
 
 	int j = 0;
 	int loops = 0;
+	int i;
+	for (i = 0 ; i < num_blocks/block_size ; i++) {
+		int j;
+		for (j = 0 ; j < block_size-1 ; j++) {
+			const char * b = free_block_list.c_str();
+			disk.put(b[i*(block_size-1)+j]);
+ 		}
+
+		disk.write("\n", sizeof(char));
+	}
+ 
+
 	while (j < num_blocks/block_size) {
 		int i;
 		for (i = 0 ; j < num_blocks/block_size && i < block_size-1 ; i++) {
@@ -437,31 +449,75 @@ void shutdown_globals() {
 
 	left -= (loops*(block_size-1));
 
-	std::cout << left << std::endl;
+	disk.seekp(std::ios_base::beg + (loops+2)*block_size + num_blocks);
 
-	disk.seekp(disk.tellp()+(block_size-left));
-
-	inode sample;
-	sample.file_name = "sample.txt";
-	sample.file_size = 128;
-	sample.location = 3+(num_blocks/block_size);
-	sample.direct_blocks.push_back(320);
-	sample.direct_blocks.push_back(990);
-
-
-	inode_map["sample.txt"] = sample;
+//	inode sample;
+//	sample.file_name = "sample.txt";
+//	sample.file_size = 128;
+//	sample.location = (loops+3)+(num_blocks/block_size);
+//	sample.direct_blocks[0] = 320;
+//	sample.direct_blocks[1] = 990;
+//	sample.direct_blocks[2] = 900;
+//	sample.double_indirect_block = 444;
+//
+//	inode sample2;
+//	sample2.file_name = "sample2.txt";
+//	sample2.file_size = 256;
+//	sample2.location = sample.location+1;
+//	sample2.direct_blocks[0] = 333;
+//	sample2.direct_blocks[1] = 991;
+//	sample2.direct_blocks[2] = 1000;
+//	sample2.indirect_block = 902;
+//
+//	inode_map["sample.txt"] = sample;
+//	inode_map["sample2.txt"] = sample2;
 
 	std::map<std::string, inode>::iterator it;
 
 	for (it = inode_map.begin() ; it != inode_map.end() ; it++) {
 
+		int seek = 0;
+
 		disk.write(it->second.file_name.c_str(), it->second.file_name.length()*sizeof(char));
 		disk.write(":", sizeof(char));
+		seek += it->second.file_name.length()*sizeof(char) + sizeof(char);
+	
 		char h[5];
 		sprintf(h, "%x", it->second.location);
+
 		disk.write(h, std::string(h).length()*sizeof(char));
 		disk.write(":", sizeof(char));
-		disk.write(std::to_string(it->second.file_size).c_str(), std::to_string(it->second.file_size).length()*sizeof(char));
+		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+
+		sprintf(h, "%x", it->second.file_size);
+		disk.write(h, std::string(h).length()*sizeof(char));
+		disk.write(":", sizeof(char));
+		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+
+		int i;
+		for (i = 0 ; i < it->second.direct_blocks.size() ; i++) {
+			sprintf(h, "%x", it->second.direct_blocks[i]);
+			disk.write(h, std::string(h).length()*sizeof(char));
+
+			if (i == 11) {
+				disk.write(":", sizeof(char));
+			} else {
+				disk.write(" ", sizeof(char));
+			}
+
+			seek += std::string(h).length()*sizeof(char) + sizeof(char);
+		}
+
+		sprintf(h, "%x", it->second.indirect_block);
+		disk.write(h, std::string(h).length()*sizeof(char));
+		disk.write(":", sizeof(char));
+		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+
+		sprintf(h, "%x", it->second.double_indirect_block);
+		disk.write(h, std::string(h).length()*sizeof(char));
+		seek += std::string(h).length()*sizeof(char);
+
+		disk.seekp(disk.tellp()+(block_size-seek));
 	}
 
 	disk.close();
