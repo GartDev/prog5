@@ -459,13 +459,30 @@ int add_blocks(std::string fname, int num_blocks){
 	//notes: block_size/sizeof(int)
 	if(at_capacity(target_inode.indirect_blocks, 0) == 0){
 		while(num_blocks != 0){
-			if(target_inode.indirect_blocks.size() < (block_size/sizeof(int))){
-				int block = 2;
-				target_inode.indirect_blocks.push_back(block);
-				free_block_list.pop_back();
+			int block = -1;
+			for(i = (int)(3+(num_blocks/(block_size-1)))+256; i < free_block_list.size(); i++){
+				if(free_block_list[i] = 0){
+					block = i-1;
+					free_block_list[i] = 1;
+					break;
+				}	
+			}
+			if(block == -1){
+				return -1;
+			}
+			else{
+			//writing to indirect block
+				int ind_blk = target_inode.indirect_blocks;
 				num_blocks--;
-			}		
-				else{break;}
+				std::ofstream ofs;
+				std::ifstream ifs;
+				ifs.open(disk_file_name, std::ifstream::in);
+				seekp(std::ios_base::beg, (block-1)block_size);
+				string line = getline();
+			//	
+			}
+			num_blocks--;
+					
 		}
 	}
 	if(num_blocks == 0){
@@ -489,7 +506,6 @@ int add_blocks(std::string fname, int num_blocks){
 	return -1;
 }	
 */
-//}
 void shutdown_globals() {
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
