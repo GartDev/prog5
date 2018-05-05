@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <map>
 #include <vector>
-
+//getline from
 pthread_cond_t fill, empty;
 pthread_mutex_t mutex;
 
@@ -251,7 +251,7 @@ void deleteFile(std::string fileName){
 	}
 	if(!myNode.double_indirect_blocks.empty()){
 		for(int i = 0; i<sizeof(myNode.double_indirect_blocks); i++){
-			
+
 			free_block_list.push_back(myNode.double_indirect_blocks[i]);
 		}
 	}
@@ -422,7 +422,7 @@ void shutdown_globals() {
 				i++;
 			}
 
-			disk.write(" ", sizeof(char)); 
+			disk.write(" ", sizeof(char));
 			dash = 0;
 		}
 	} else if (free_block_list.size() == 1) {
@@ -433,7 +433,7 @@ void shutdown_globals() {
 */
 
 
-	
+
 
 	disk.close();
 }
