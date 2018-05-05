@@ -356,16 +356,16 @@ void ssfsCat(std::string fileName){
 //	int fileSize = myNode.file_size;
 	//read(fileName, 0, fileSize);
 }
-/*
+
 int add_blocks(std::string fname, int num_blocks){
-	inode inode = inode_map[fname];
+	inode target_inode = inode(fname, inode_map[fname].file_size);
 	int not_taken = -1;
 	int i;
 	//this loop checks if we have direct blocks open and allocates
 	while(num_blocks != 0){
 
 		for(i = 0; i < 12; i++){
-			if(inode.direct_blocks[i] == 0){
+			if(target_inode.direct_blocks[i] == 0){
 				not_taken = i;
 				break;
 			}
@@ -375,44 +375,63 @@ int add_blocks(std::string fname, int num_blocks){
 			break;
 		}
 		else{
-			int block = free_block_list.back();
-			inode.direct_blocks[not_taken] = block;
-			free_block_list.pop_back();
+			
+			target_inode.direct_blocks[not_taken] = block;
+			//reading free block liist
+			int block = -1;
+			for(i = (int)(3+(num_blocks/(block_size-1)))+256; i < free_block_list.size(); i++){
+				if(free_block_list[i] = 0){
+					block = i-1;
+					free_block_list[i] = 1;
+					break;
+				}	
+			}
+			if(block == -1){
+				return -1;
+			}
+			else{
+			target_inode.direct_blocks[not_taken] = block;
 			num_blocks--;
+			}
 		}
 	}
 	if(num_blocks == 0){
-		return 1;
+		return 0;
 	}
 	// this is the indirect block level
 	//notes: block_size/sizeof(int)
-	while(num_blocks != 0){
-		if(inode.indirect_blocks.size() < (block_size/sizeof(int))){
-			int block = free_block_list.back();
-			inode.indirect_blocks.push_back(block);
-			free_block_list.pop_back();
-			num_blocks--;
-		}		else{break;}
+	if(at_capacity(target_inode.indirect_blocks, 0) == 0){
+		while(num_blocks != 0){
+			if(target_inode.indirect_blocks.size() < (block_size/sizeof(int))){
+				int block = 2;
+				target_inode.indirect_blocks.push_back(block);
+				free_block_list.pop_back();
+				num_blocks--;
+			}		
+				else{break;}
+		}
 	}
 	if(num_blocks == 0){
-		return 1;
+		return 0;
 	}
 	//this is the double indirect level
-	while(num_blocks != 0){
-		if(inode.double_indirect_blocks.size() < (block_size/sizeof(int))){
-			int block = free_block_list.back();
-			if(inode.double_indirect_blocks.back().size() < (block_size/sizeof(int))){
-				inode.double_indirect_blocks.push_back(
-			inode.double_indirect_blocks.back().push_back(block);
-			free_block_list.pop_back();
-			num_blocks--;
-		}
-		else{break;}
-
-	}
-*/
+	if(at_capacity(target_inode.indirect_blocks, 0) == 0){
+		while(num_blocks != 0){
+			if(target_inode.double_indirect_blocks.size() < (block_size/sizeof(int))){
+				int block = 2;
+				if(target_inode.double_indirect_blocks.back().size() < (block_size/sizeof(int))){
+					target_inode.
+					free_block_list.pop_back();
+					num_blocks--;
+				}
+			else{break;}
 //return false;
-}
+			}
+		}	
+	}
+	return -1;
+}	
+
 void shutdown_globals() {
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
