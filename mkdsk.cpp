@@ -89,14 +89,19 @@ int main(int argc, char * argv[ ]) {
 	disk_output.write(" ", sizeof(char));
 	disk_output.write(block_size_c, block_size_s.length()*sizeof(char));
 	disk_output.write(" 0 ", sizeof(char)*4);
-	
-	disk_output.seekp(disk_output.tellp()+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+5))));
 
+	int pos = disk_output.tellp();
+	
+	disk_output.seekp(pos+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+5))));
 	int i;
 	for (i = 0 ; i < num_blocks/block_size ; i++) {
 		int j;
 		for (j = 0 ; j < block_size-1 ; j++) {
-			disk_output.write("0", sizeof(char));
+			if ((((block_size-1)*i)+j) < (2+(num_blocks)/(block_size-1))) {
+				disk_output.write("1", sizeof(char));
+			} else {
+				disk_output.write("0", sizeof(char));
+			}
 		}
 		disk_output.write("\n", sizeof(char));
 	}
