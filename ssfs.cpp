@@ -229,37 +229,40 @@ void build_free_block_list() {
 // Disk Ops below ------------------------
 
 void deleteFile(std::string fileName){
-	/*
 
 	int isempty = 1;//used for direct blocks, in an array
 	int sum = 0;
-	for(int i = 0; i<sizeof(myNode.direct_blocks);i++){
-		sum+= myNode.direct_blocks[i];
-	}
+/*	for(int i = 0; i<inode_map[fileName].direct_blocks.size();i++){
+		sum+= inode_map[fileName].direct_blocks[i];
+	}*/
 	if(sum != 0){
 		isempty = 0;
 	}
-	if(!myNode.double_indirect_blocks.empty()){
-		for(int i = 0; i<sizeof(myNode.double_indirect_blocks); i++){
-
-		//	free_block_list.push_back(myNode.double_indirect_blocks[i]);
+	if(!inode_map[fileName].double_indirect_blocks.empty()){
+		for(int i = 0; i<inode_map[fileName].double_indirect_blocks.size(); i++){
+			for(int j = 0; j<inode_map[fileName].double_indirect_blocks[i].size(); j++){
+				int freeIndex = inode_map[fileName].double_indirect_blocks[i][j]-1;
+				free_block_list[freeIndex]= '0';
+			}
 		}
 	}
-	if(!myNode.indirect_blocks.empty()){
-		for(int i = 0; i<sizeof(myNode.indirect_blocks); i++){
-		//	free_block_list.push_back(myNode.indirect_blocks[i]);
+	if(!inode_map[fileName].indirect_blocks.empty()){
+		for(int i = 0; i<inode_map[fileName].indirect_blocks.size(); i++){
+			int freeIndex = inode_map[fileName].indirect_blocks[i]-1;
+			free_block_list[freeIndex]= '0';
 		}
 	}
-	if(isempty == 1){
-			for(int i = 0; i<sizeof(myNode.direct_blocks); i++){
-		//		free_block_list.push_back(myNode.direct_blocks[i]);
+	/*if(isempty == 1){
+			for(int i = 0; i<inode_map[fileName].direct_blocks.size(); i++){
+				int freeIndex = inode_map[fileName].direct_blocks[i]-1;
+				free_block_list[freeIndex]= '0';
 		}
-	}
+	}*/
     //remove the inode from the inode map
 //	targetBlock = inode_map[fileName].location;
 	inode_map.erase(fileName);
 	//free_block_list.push_back(targetBlock);
-	*/
+
 }
 
 /*
@@ -269,8 +272,7 @@ void list(){
 	int fileSize;
 		while(it!= inode_map.end()){
 		std::string fileName = it->first;
-		inode myNode = it->second;
-		fileSize = myNode.file_size;
+		fileSize = inode_map[fileName].file_size;
 		std::cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes\n";
 //
 }
@@ -343,7 +345,8 @@ int createFile(std::string fileName){
 	*/
 }
 void ssfsCat(std::string fileName){
-	/*int targetBlock
+	/*
+	int targetBlock;
 	char * buffer = new char[block_size];
 	int offset = (targetBlock-1)*block_size;
 	FILE * pfile;
@@ -374,9 +377,19 @@ void shutdown_globals() {
 	disk.write(files_in_system_s.c_str(), files_in_system_s.length()*sizeof(char));
 	disk.write("\n", sizeof(char));
 /*
+	disk.seekp(disk.tellp()+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+files_in_system_s.length()+2))));
+	+	disk.write("\n", sizeof(char));
 	free_block_list = {1, 2, 3, 4, 5, 90, 1002, 1003, 1004, 1009, 1010};
 
 	int i;
+	for (i = 0 ; i < num_blocks/block_size ; i++) {
+-		int j;
+-		for (j = 0 ; j < block_size-1 ; j++) {
+-			const char * b = free_block_list.c_str();
+-			disk.put(b[i*(block_size-1)+j]);
+-		}
+-		disk.write("\n", sizeof(char));
+-	}
 	if (free_block_list.size() > 1) {
 		int dash = 0;
 		for (i = 0 ; i < free_block_list.size()-1 ; i++) {
@@ -389,14 +402,27 @@ void shutdown_globals() {
 				next = free_block_list[i+1];
 				prev = free_block_list[i];
 			}
-
+	int left = num_blocks - (num_blocks/block_size)*(block_size-1);
+-
+-	int j = 0;
+-	int loops = 0;
+-	while (j < num_blocks/block_size) {
+-		int i;
+-		for (i = 0 ; j < num_blocks/block_size && i < block_size-1 ; i++) {
+-			const char * a = free_block_list.c_str();
+-			std::cout << i+loops*(block_size-1) << std::endl;
+-			disk.put(a[num_blocks-(left-i-1)-1+(loops*(block_size-1))]);
+-			j++;
+-		}
 			disk.write(std::to_string(first).c_str(), std::to_string(first).length()*sizeof(char));
 			if (dash) {
 				disk.write("-", sizeof(char));
 				disk.write(std::to_string(prev).c_str(), std::to_string(prev).length()*sizeof(char));
 				i++;
 			}
-
+		if (i == block_size-1) {
+-			disk.write("\n", sizeof(char));
+-			loops += 1;
 			disk.write(" ", sizeof(char));
 			dash = 0;
 		}
