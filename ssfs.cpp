@@ -108,12 +108,12 @@ int main(int argc, char **argv){
 
 	disk_file_name = std::string(argv[1]);
 	get_system_parameters();
-	free_block_list = new int[num_blocks+1];
-	build_free_block_list();
+//	free_block_list = new int[num_blocks+1];
+//	build_free_block_list();
 	//build_inode_map();
 
 	shutdown_globals();
-/*
+
 	inode * s = new inode("sample.txt", 128);
 
 	int j;
@@ -140,7 +140,7 @@ int main(int argc, char **argv){
 	for (j = 0 ; j < 12 ; j++) {
 		std::cout << s2->direct_blocks[j] << std::endl;
 	}
-*/
+
 
 	pthread_t p;
 	int rc;
