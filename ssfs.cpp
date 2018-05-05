@@ -309,7 +309,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 
 	//construct the inode from the data in DISK
-	char * disk_name_c = new char [disk_file_name.length()+1]
+	*char * disk_name_c = new char [disk_file_name.length()+1]
 	std::strcpy (cstr, disk_file_name.disk_name_c)
 	FILE * open_disk = fopen(disk_name_c, "rb")
 	fseek(open_disk, (inode_pos-1)*block_size, SEEK_SET)
@@ -322,11 +322,11 @@ void read(std::string fname, int start_byte, int num_bytes){
 	if(current_size < start_byte){
 		std::cout << "Start byte is out of range" << std::endl;
 	}
-	if((start_byte + num_bytes) > inode.file_size){
-		real_read_length =(num_bytes - ((start_byte + num_bytes) >
-		 inode.file_size));
+	if((start_byte + num_bytes) > file_size){
+		real_read_length =((start_byte + num_bytes) - file_size);
 	}
-	*/
+
+*/
 }
 int createFile(std::string fileName){
 	if(inode_map.count(fileName)==1){
