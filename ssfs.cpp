@@ -25,6 +25,9 @@ void get_system_parameters();
 void build_inode_map();
 void build_free_block_list();
 
+int b60_to_decimal(const char * target);
+const char * decimal_to_b60(int target);
+
 std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 int createFile(std::string fileName);
@@ -180,8 +183,8 @@ void get_system_parameters() {
 }
 
 void build_inode_map() {
-	std::cout<<"block size " << block_size << std::endl;
-	std::cout<<"num blocks " << num_blocks << std::endl;
+//	std::cout<<"block size " << block_size << std::endl;
+//	std::cout<<"num blocks " << num_blocks << std::endl;
 
 	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 
@@ -193,11 +196,11 @@ void build_inode_map() {
 	}
 	*/
 	//seekg beginning + num_blocks + block_size many characters
-	std::cout << "what: " << (block_size)*(3+(num_blocks/(block_size-1))) << std::endl;
+//	std::cout << "what: " << (block_size)*(3+(num_blocks/(block_size-1))) << std::endl;
 	disk.seekg(block_size*(3+(num_blocks/(block_size-1)) - 1), std::ios::beg);
     int length = disk.tellg();
 
-	std::cout << "disk length " << length << std::endl;
+//	std::cout << "disk length " << length << std::endl;
 	//getline(disk, line, '\n')
 	//disk.seekg(disk.cur,num_blocks);
 
@@ -212,17 +215,17 @@ void build_inode_map() {
 				if(data_num == 0){
 					//std::cout << "token " << data_num <<  ": " << token << std::endl;
 					this_node.file_name = token;
-					std::cout << "file name " << ": " << this_node.file_name << std::endl;
+//					std::cout << "file name " << ": " << this_node.file_name << std::endl;
 				}else if(data_num == 1){
 					ss << std::hex << token;
 					ss >> this_node.location;
 					//std::cout << "token " << data_num <<  ": " << token << std::endl;
-					std::cout << "location " << ": " << this_node.location << std::endl;
+//					std::cout << "location " << ": " << this_node.location << std::endl;
 				}else if(data_num == 2){
 					ss << std::hex << token;
 					ss >> this_node.file_size;
 					//std::cout << "token " << data_num <<  ": " << token << std::endl;
-					std::cout << "size: " << this_node.file_size << std::endl;
+//					std::cout << "size: " << this_node.file_size << std::endl;
 				}else if(data_num == 3){
 					std::istringstream token_stream(token);
 					while(getline(token_stream,token,' ')){
@@ -231,20 +234,20 @@ void build_inode_map() {
 						int block;
 						hex_conv << std::hex << token;
 						hex_conv >> block;
-						std::cout << "block: " << block << std::endl;
+//						std::cout << "block: " << block << std::endl;
 						this_node.direct_blocks.push_back(block);
 					}
-					std::cout << std::endl;
+//					std::cout << std::endl;
 				}else if(data_num == 4){
 					//std::cout << "token " << data_num <<  ": " << token << std::endl;
 					ss << std::hex << token;
 					ss >> this_node.indirect_block;
-					std::cout << "iblock: " << this_node.indirect_block << std::endl;
+//					std::cout << "iblock: " << this_node.indirect_block << std::endl;
 				}else if(data_num == 5){
 					//std::cout << "token " << data_num <<  ": " << token << std::endl;
 					ss << std::hex << token;
 					ss >> this_node.double_indirect_block;
-					std::cout << "double iblock: " << this_node.double_indirect_block << std::endl;
+//					std::cout << "double iblock: " << this_node.double_indirect_block << std::endl;
 				}
 				data_num++;
 			}
@@ -618,4 +621,35 @@ void shutdown_globals() {
 	}
 
 	disk.close();
+}
+
+int b60_to_decimal(const char * target) {
+	int ret = 0;
+	int i;
+	for (i = 0 ; i < std::string(target).length() ; i++) {
+		int cur;
+		if (isdigit(target[i])) {
+			cur = target[i]-'0';
+
+		} else {
+			char x = target[i];
+			int value = int(x);
+
+			if (value > 90) {
+				value -= 6;
+			}
+
+			cur = value-55;
+		}
+
+		int set = 1;
+		int j;
+		for (j = i ; j < std::string(target).length()-1 ; j++) {
+			set *= 60;
+		}
+
+		ret += cur*set;
+	}
+
+	return ret;
 }
