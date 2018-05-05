@@ -28,12 +28,11 @@ void build_free_block_list();
 std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 int createFile(std::string fileName);
-//void deleteFile(std::string fileName);
+void deleteFile(std::string fileName);
 //bool write(std::string fname, char to_write, int start_byte, int num_bytes);
 //void read(std::string fname, int start_byte, int num_bytes);
 void ssfsCat(std::string fileName);
 void list();
-//bool insert(*inode lilwayne);
 
 void shutdown_globals();
 
@@ -214,28 +213,16 @@ void build_free_block_list() {
 }
 
 // Disk Ops below ------------------------
-/*
-void deleteFile(std::string fileName){
 
-    //Get the inode from the inode map using fileName as the key
-	int targetBlock =
-    //return the blocks to the freelist
-	char * buffer = new char[block_size];
-	int offset = (targetBlock-1)*block_size;
-	FILE * pfile;
-	const char * diskfile = disk_file_name.c_str();
-	pfile= fopen(diskfile,"r");
-	fseek(pfile,offset,SEEK_SET);
-	fgets(buffer,block_size,pfile);
-	int fileSize = myNode.file_size;
-	int sum = 0;
-/*	for(int i = 0; i<inode_map[fileName].direct_blocks.size();i++){
-		sum+= inode_map[fileName].direct_blocks[i];
-	}*/
-	if(sum != 0){
-		//isempty = 0;
+void deleteFile(std::string fileName){
+	if(!inode_map[fileName].direct_blocks.empty()){
+			for(int i = 0; i<inode_map[fileName].direct_blocks.size(); i++){
+				int freeIndex = inode_map[fileName].direct_blocks[i]-1;
+				free_block_list[freeIndex]= '0';
+		}
 	}
-	if(!inode_map[fileName].double_indirect_blocks.empty()){
+	if(inode_map[fileName].direct_blocks.size() == 12)
+	/*if(!inode_map[fileName].double_indirect_blocks.empty()){
 		for(int i = 0; i<inode_map[fileName].double_indirect_blocks.size(); i++){
 			for(int j = 0; j<inode_map[fileName].double_indirect_blocks[i].size(); j++){
 				int freeIndex = inode_map[fileName].double_indirect_blocks[i][j]-1;
@@ -248,18 +235,11 @@ void deleteFile(std::string fileName){
 			int freeIndex = inode_map[fileName].indirect_blocks[i]-1;
 			free_block_list[freeIndex]= '0';
 		}
-	}
-	/*if(isempty == 1){
-			for(int i = 0; i<inode_map[fileName].direct_blocks.size(); i++){
-				int freeIndex = inode_map[fileName].direct_blocks[i]-1;
-				free_block_list[freeIndex]= '0';
-		}
 	}*/
-    //remove the inode from the inode map
-//	targetBlock = inodeMap[fileName].location;
-//	inode_map.erase(fileName);
-//	free_block_list.push_back(targetBlock);
-}*/
+	int targetBlock = inode_map[fileName].location;
+	inode_map.erase(fileName);
+	free_block_list.push_back(targetBlock);
+}
 
 /*
 void list(){
@@ -314,7 +294,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 */
 
 int createFile(std::string fileName){
-	/*
+/*
 	if(inode_map.count(fileName)==1){
 		std::cerr<< "create command failed, file named " << fileName << " already exists." << "\n";
 		return(0);
@@ -343,7 +323,8 @@ int createFile(std::string fileName){
 		}
 	}
 	return(1);
-*/}
+	*/
+}
 
 void ssfsCat(std::string fileName){
 	/*
@@ -354,10 +335,11 @@ void ssfsCat(std::string fileName){
 	const char * diskfile = disk_file_name.c_str();
 	pfile= fopen(diskfile,"r");
 	fseek(pfile,offset,SEEK_SET);
-	fgets(buffer,block_size,pfile);*/
+	fgets(buffer,block_size,pfile);
 //	inode myNode = inode_map[fileName];
 //	int fileSize = myNode.file_size;
 	//read(fileName, 0, fileSize);
+	*/
 }
 /*
 int add_blocks(std::string fname, int num_blocks){
@@ -413,9 +395,9 @@ int add_blocks(std::string fname, int num_blocks){
 		else{break;}
 
 	}
-*/
+
 //return false;
-}
+}*/
 void shutdown_globals() {
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
@@ -436,20 +418,20 @@ void shutdown_globals() {
 	disk.seekp(disk.tellp()+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+files_in_system_s.length()+2))));
 
 	int left = num_blocks - (num_blocks/block_size)*(block_size-1);
--
--	int j = 0;
--	int loops = 0;
--	while (j < num_blocks/block_size) {
--		int i;
--		for (i = 0 ; j < num_blocks/block_size && i < block_size-1 ; i++) {
--			const char * a = free_block_list.c_str();
--			disk.put(a[num_blocks-(left-i-1)-1+(loops*(block_size-1))]);
--			j++;
--		}
+
+	int j = 0;
+	int loops = 0;
+	while (j < num_blocks/block_size) {
+		int i;
+		for (i = 0 ; j < num_blocks/block_size && i < block_size-1 ; i++) {
+			const char * a = free_block_list.c_str();
+			disk.put(a[num_blocks-(left-i-1)-1+(loops*(block_size-1))]);
+			j++;
+		}
 
 		if (i == block_size-1) {
--			disk.write("\n", sizeof(char));
--			loops += 1;
+			disk.write("\n", sizeof(char));
+			loops += 1;
 		}
 	}
 
