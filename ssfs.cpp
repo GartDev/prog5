@@ -413,7 +413,7 @@ void ssfsCat(std::string fileName){
 //	int fileSize = myNode.file_size;
 	//read(fileName, 0, fileSize);
 }
-
+/*
 int add_blocks(std::string fname, int num_blocks){
 	inode target_inode = inode(fname, inode_map[fname].file_size);
 	int not_taken = -1;
@@ -488,7 +488,7 @@ int add_blocks(std::string fname, int num_blocks){
 	}
 	return -1;
 }	
-
+*/
 //}
 void shutdown_globals() {
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
