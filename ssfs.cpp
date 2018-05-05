@@ -304,10 +304,8 @@ bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
-/*
+
 	inode myNode = inode_map[fname];
-
-
 	//construct the inode from the data in DISK
 	*char * disk_name_c = new char [disk_file_name.length()+1]
 	std::strcpy (cstr, disk_file_name.disk_name_c)
@@ -326,7 +324,6 @@ void read(std::string fname, int start_byte, int num_bytes){
 		real_read_length =((start_byte + num_bytes) - file_size);
 	}
 
-*/
 }
 int createFile(std::string fileName){
 	if(inode_map.count(fileName)==1){
