@@ -350,6 +350,7 @@ int createFile(std::string fileName){
 			if(!targetblock == 0){
 				//write inode data to the targetblock
 
+				//Godly
 				inode myNode
 
 			}else{
