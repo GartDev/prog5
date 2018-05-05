@@ -356,7 +356,63 @@ void ssfsCat(std::string fileName){
 //	int fileSize = myNode.file_size;
 	//read(fileName, 0, fileSize);
 }
+/*
+int add_blocks(std::string fname, int num_blocks){
+	inode inode = inode_map[fname];
+	int not_taken = -1;
+	int i;
+	//this loop checks if we have direct blocks open and allocates
+	while(num_blocks != 0){
 
+		for(i = 0; i < 12; i++){
+			if(inode.direct_blocks[i] == 0){
+				not_taken = i;
+				break;
+			}
+		}
+		if(not_taken == -1){
+			//that means that all the direct blocks are taken
+			break;
+		}
+		else{
+			int block = free_block_list.back();
+			inode.direct_blocks[not_taken] = block;
+			free_block_list.pop_back();
+			num_blocks--;
+		}
+	}
+	if(num_blocks == 0){
+		return 1;
+	}
+	// this is the indirect block level
+	//notes: block_size/sizeof(int)
+	while(num_blocks != 0){
+		if(inode.indirect_blocks.size() < (block_size/sizeof(int))){
+			int block = free_block_list.back();
+			inode.indirect_blocks.push_back(block);
+			free_block_list.pop_back();
+			num_blocks--;
+		}		else{break;}
+	}
+	if(num_blocks == 0){
+		return 1;
+	}
+	//this is the double indirect level
+	while(num_blocks != 0){
+		if(inode.double_indirect_blocks.size() < (block_size/sizeof(int))){
+			int block = free_block_list.back();
+			if(inode.double_indirect_blocks.back().size() < (block_size/sizeof(int))){
+				inode.double_indirect_blocks.push_back(
+			inode.double_indirect_blocks.back().push_back(block);
+			free_block_list.pop_back();
+			num_blocks--;
+		}
+		else{break;}
+
+	}
+*/
+//return false;
+}
 void shutdown_globals() {
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
