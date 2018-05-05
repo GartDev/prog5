@@ -266,27 +266,25 @@ void deleteFile(std::string fileName){
 		}
 	}
     //remove the inode from the inode map
-	targetBlock = inodeMap[fileName].location;
+	targetBlock = inode_map[fileName].location;
 	inode_map.erase(fileName);
 	free_block_list.push_back(targetBlock);
 }
 
 void list(){
 	//for each element in inodemap, display the inode->name and inode->size
-	map<string,inode>::iterator it = inode_map.begin();
-	string fileName;
-	inode myNode;
+	std::map<std::string,inode>::iterator it = inode_map.begin();
 	int fileSize;
 		while(it!= inode_map.end()){
-		fileName = it -> first;
-		myNode = it -> second;
+		std::string fileName = it->first;
+		inode myNode = it->second;
 		fileSize = myNode.file_size;
-		cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes\n";
+		std::cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes\n";
 //
 }
 
 bool write(std::string fname, char to_write, int start_byte, int num_bytes){
-//	inode inode = inode_map[fname];
+	inode myNode = inode_map[fname];
 
 	//check file size, return error if start_byte is out of bounds
 //	int current_size = inode.file_size;
@@ -307,7 +305,7 @@ bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
 /*
-	int inode_pos = INODE_MAP[fname];
+	inode myNode = inode_map[fname];
 
 
 	//construct the inode from the data in DISK
@@ -327,7 +325,8 @@ void read(std::string fname, int start_byte, int num_bytes){
 	if((start_byte + num_bytes) > inode.file_size){
 		real_read_length =(num_bytes - ((start_byte + num_bytes) >
 		 inode.file_size));
-	}*/
+	}
+	*/
 }
 int createFile(std::string fileName){
 	if(inode_map.count(fileName)==1){
@@ -344,8 +343,9 @@ int createFile(std::string fileName){
 			}
 			if(!targetblock == 0){
 				//write inode data to the targetblock
-
-				inode myNode
+				inode myNode(fileName,0);
+				inode_map[filename] = myNode;
+				inode_map[fileName].location = targetblock;
 
 			}else{
 				std::cerr<<"create command failed, there is no room left on the inodeMap for " << fileName << "\n";
@@ -356,7 +356,7 @@ int createFile(std::string fileName){
 			return(0);
 		}
 	}
-	return(1);*/
+	return(1);
 }
 void ssfsCat(std::string fileName){
 	/*int targetBlock
