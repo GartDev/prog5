@@ -28,5 +28,5 @@ class inode {
         int file_size;
         std::vector<int> direct_blocks;
         int indirect_block;
-	int double_indirect_block;
+	    int double_indirect_block;
 };
