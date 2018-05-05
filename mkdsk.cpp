@@ -59,6 +59,8 @@ int main(int argc, char * argv[ ]) {
 		fwrite("\n", sizeof(char), 1, disk_output1);
 	}
 
+	
+
 	std::string num_blocks_s = std::to_string(num_blocks);
 	std::string block_size_s = std::to_string(block_size);
 
@@ -82,21 +84,36 @@ int main(int argc, char * argv[ ]) {
 //	fwrite(" 0\n", sizeof(char), 3, disk_output);
 
 	std::ofstream disk_output(disk_file_name.c_str(), std::ios::in | std::ios::out | std::ios::binary);
-
+	
 	disk_output.write(num_blocks_c, num_blocks_s.length()*sizeof(char));
 	disk_output.write(" ", sizeof(char));
 	disk_output.write(block_size_c, block_size_s.length()*sizeof(char));
 	disk_output.write(" 0 ", sizeof(char)*4);
-
+	
 	disk_output.seekp(disk_output.tellp()+(block_size-(sizeof(char)*(num_blocks_s.length()+block_size_s.length()+5))));
 
 	int i;
 	for (i = 0 ; i < num_blocks/block_size ; i++) {
 		int j;
-		for (j = 0 ; j < block_size ; j++) {
+		for (j = 0 ; j < block_size-1 ; j++) {
 			disk_output.write("0", sizeof(char));
 		}
 		disk_output.write("\n", sizeof(char));
+	}
+
+	int left = num_blocks - (num_blocks/block_size)*(block_size-1);
+
+	int j = 0;
+	while (j < num_blocks/block_size) {
+		int i;
+		for (i = 0 ; j < num_blocks/block_size && i < block_size-1 ; i++) {
+			disk_output.write("0", sizeof(char));
+			j++;
+		}
+
+		if (i == block_size-1) {
+			disk_output.write("\n", sizeof(char));
+		}
 	}
 
 	disk_output.close();
