@@ -10,11 +10,17 @@ class inode {
 	inode() {
 		this->file_name = "";
 		this->file_size = -1;
+		this->direct_blocks = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		this->indirect_block = 0;
+		this->double_indirect_block = 0;
 	}
 
 	inode(std::string file_name, int file_size) {
 		this->file_name = file_name;
 		this->file_size = file_size;
+		this->direct_blocks = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		this->indirect_block = 0;
+		this->double_indirect_block = 0;
 	}
 
         std::string file_name;

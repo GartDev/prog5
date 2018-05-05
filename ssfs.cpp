@@ -111,7 +111,7 @@ int main(int argc, char **argv){
 	disk_file_name = std::string(argv[1]);
 	get_system_parameters();
 	build_free_block_list();
-	//build_inode_map();
+	build_inode_map();
 
 	shutdown_globals();
 /*
@@ -180,6 +180,9 @@ void get_system_parameters() {
 }
 
 void build_inode_map() {
+	std::cout<<"block size " << block_size << std::endl;
+	std::cout<<"num blocks " << num_blocks << std::endl;
+
 	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 
 	std::string line;
@@ -190,57 +193,64 @@ void build_inode_map() {
 	}
 	*/
 	//seekg beginning + num_blocks + block_size many characters
-	disk.seekg((num_blocks + 2*block_size), std::ios::beg);
+	std::cout << "what: " << (block_size)*(3+(num_blocks/(block_size-1))) << std::endl;
+	disk.seekg(block_size*(3+(num_blocks/(block_size-1)) - 1), std::ios::beg);
+    int length = disk.tellg();
+
+	std::cout << "disk length " << length << std::endl;
+	//getline(disk, line, '\n')
+	//disk.seekg(disk.cur,num_blocks);
 
 	int counter = 0;
 	while (getline(disk, line, '\n') && line[0] != '\0' && counter < 256) {
-		inode this_node;
-		std::string token;
-		std::istringstream line_stream(line);
-		int data_num = 0;
-		while(getline(line_stream,token,':')){
-			std::stringstream ss;
-			if(data_num == 0){
-				std::cout << "token " << data_num <<  ": " << token << std::endl;
-				this_node.file_name = token;
-			}else if(data_num == 1){
-				ss << std::hex << token;
-				ss >> this_node.location;
-				std::cout << "token " << data_num <<  ": " << token << std::endl;
-				std::cout << "location " << ": " << this_node.location << std::endl;
-			}else if(data_num == 2){
-				ss << std::hex << token;
-				ss >> this_node.file_size;
-				std::cout << "token " << data_num <<  ": " << token << std::endl;
-				std::cout << "size: " << this_node.file_size << std::endl;
-			}else if(data_num == 3){
-				std::istringstream token_stream(token);
-				while(getline(token_stream,token,' ')){
-					std::cout << "sub token " << data_num <<  ": " << token << std::endl;
-					std::stringstream hex_conv;
-					int block;
-					hex_conv << std::hex << token;
-					hex_conv >> block;
-					std::cout << "block: " << block << std::endl;
-					this_node.direct_blocks.push_back(block);
+			inode this_node;
+			std::string token;
+			std::istringstream line_stream(line);
+			int data_num = 0;
+			while(getline(line_stream,token,':')){
+				std::stringstream ss;
+				if(data_num == 0){
+					//std::cout << "token " << data_num <<  ": " << token << std::endl;
+					this_node.file_name = token;
+					std::cout << "file name " << ": " << this_node.file_name << std::endl;
+				}else if(data_num == 1){
+					ss << std::hex << token;
+					ss >> this_node.location;
+					//std::cout << "token " << data_num <<  ": " << token << std::endl;
+					std::cout << "location " << ": " << this_node.location << std::endl;
+				}else if(data_num == 2){
+					ss << std::hex << token;
+					ss >> this_node.file_size;
+					//std::cout << "token " << data_num <<  ": " << token << std::endl;
+					std::cout << "size: " << this_node.file_size << std::endl;
+				}else if(data_num == 3){
+					std::istringstream token_stream(token);
+					while(getline(token_stream,token,' ')){
+						//std::cout << "sub token " << data_num <<  ": " << token << std::endl;
+						std::stringstream hex_conv;
+						int block;
+						hex_conv << std::hex << token;
+						hex_conv >> block;
+						std::cout << "block: " << block << std::endl;
+						this_node.direct_blocks.push_back(block);
+					}
+					std::cout << std::endl;
+				}else if(data_num == 4){
+					//std::cout << "token " << data_num <<  ": " << token << std::endl;
+					ss << std::hex << token;
+					ss >> this_node.indirect_block;
+					std::cout << "iblock: " << this_node.indirect_block << std::endl;
+				}else if(data_num == 5){
+					//std::cout << "token " << data_num <<  ": " << token << std::endl;
+					ss << std::hex << token;
+					ss >> this_node.double_indirect_block;
+					std::cout << "double iblock: " << this_node.double_indirect_block << std::endl;
 				}
-				std::cout << std::endl;
-			}else if(data_num == 4){
-				std::cout << "token " << data_num <<  ": " << token << std::endl;
-				ss << std::hex << token;
-				ss >> this_node.indirect_block;
-				std::cout << "iblock: " << this_node.indirect_block << std::endl;
-			}else if(data_num == 5){
-				std::cout << "token " << data_num <<  ": " << token << std::endl;
-				ss << std::hex << token;
-				ss >> this_node.double_indirect_block;
-				std::cout << "double iblock: " << this_node.double_indirect_block << std::endl;
+				data_num++;
 			}
-			data_num++;
-		}
-		counter++;
+			counter++;
 	}
-	std::cout << counter << std::endl;
+	//std::cout << counter << std::endl;
 
 	disk.close();
 }
@@ -459,7 +469,7 @@ int add_blocks(std::string fname, int num_blocks){
 	}
 */
 //return false;
-}
+//}
 void shutdown_globals() {
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
@@ -483,6 +493,18 @@ void shutdown_globals() {
 
 	int j = 0;
 	int loops = 0;
+	int i;
+	for (i = 0 ; i < num_blocks/block_size ; i++) {
+		int j;
+		for (j = 0 ; j < block_size-1 ; j++) {
+			const char * b = free_block_list.c_str();
+			disk.put(b[i*(block_size-1)+j]);
+ 		}
+
+		disk.write("\n", sizeof(char));
+	}
+ 
+
 	while (j < num_blocks/block_size) {
 		int i;
 		for (i = 0 ; j < num_blocks/block_size && i < block_size-1 ; i++) {
@@ -500,31 +522,75 @@ void shutdown_globals() {
 
 	left -= (loops*(block_size-1));
 
-	std::cout << left << std::endl;
+	disk.seekp(std::ios_base::beg + (loops+2)*block_size + num_blocks);
 
-	disk.seekp(disk.tellp()+(block_size-left));
-
-	inode sample;
-	sample.file_name = "sample.txt";
-	sample.file_size = 128;
-	sample.location = 3+(num_blocks/block_size);
-	sample.direct_blocks.push_back(320);
-	sample.direct_blocks.push_back(990);
-
-
-	inode_map["sample.txt"] = sample;
+//	inode sample;
+//	sample.file_name = "sample.txt";
+//	sample.file_size = 128;
+//	sample.location = (loops+3)+(num_blocks/block_size);
+//	sample.direct_blocks[0] = 320;
+//	sample.direct_blocks[1] = 990;
+//	sample.direct_blocks[2] = 900;
+//	sample.double_indirect_block = 444;
+//
+//	inode sample2;
+//	sample2.file_name = "sample2.txt";
+//	sample2.file_size = 256;
+//	sample2.location = sample.location+1;
+//	sample2.direct_blocks[0] = 333;
+//	sample2.direct_blocks[1] = 991;
+//	sample2.direct_blocks[2] = 1000;
+//	sample2.indirect_block = 902;
+//
+//	inode_map["sample.txt"] = sample;
+//	inode_map["sample2.txt"] = sample2;
 
 	std::map<std::string, inode>::iterator it;
 
 	for (it = inode_map.begin() ; it != inode_map.end() ; it++) {
 
+		int seek = 0;
+
 		disk.write(it->second.file_name.c_str(), it->second.file_name.length()*sizeof(char));
 		disk.write(":", sizeof(char));
+		seek += it->second.file_name.length()*sizeof(char) + sizeof(char);
+	
 		char h[5];
 		sprintf(h, "%x", it->second.location);
+
 		disk.write(h, std::string(h).length()*sizeof(char));
 		disk.write(":", sizeof(char));
-		disk.write(std::to_string(it->second.file_size).c_str(), std::to_string(it->second.file_size).length()*sizeof(char));
+		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+
+		sprintf(h, "%x", it->second.file_size);
+		disk.write(h, std::string(h).length()*sizeof(char));
+		disk.write(":", sizeof(char));
+		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+
+		int i;
+		for (i = 0 ; i < it->second.direct_blocks.size() ; i++) {
+			sprintf(h, "%x", it->second.direct_blocks[i]);
+			disk.write(h, std::string(h).length()*sizeof(char));
+
+			if (i == 11) {
+				disk.write(":", sizeof(char));
+			} else {
+				disk.write(" ", sizeof(char));
+			}
+
+			seek += std::string(h).length()*sizeof(char) + sizeof(char);
+		}
+
+		sprintf(h, "%x", it->second.indirect_block);
+		disk.write(h, std::string(h).length()*sizeof(char));
+		disk.write(":", sizeof(char));
+		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+
+		sprintf(h, "%x", it->second.double_indirect_block);
+		disk.write(h, std::string(h).length()*sizeof(char));
+		seek += std::string(h).length()*sizeof(char);
+
+		disk.seekp(disk.tellp()+(block_size-seek));
 	}
 
 	disk.close();
