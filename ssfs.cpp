@@ -38,6 +38,7 @@ void ssfsCat(std::string fileName);
 void list();
 int atCapacity(int lineNum,int flag);
 void shutdown_globals();
+void import(std::string ssfs_file, std::string unix_file);
 
 void *read_file(void *arg){
 	std::ifstream opfile;
@@ -58,17 +59,17 @@ void *read_file(void *arg){
 		if(command == "CREATE"){
 			line_stream >> ssfs_file;
 			std::cout << "Creating " << ssfs_file << std::endl;
-			//create(ssfs_file);
+			createFile(ssfs_file);
 		}else if(command == "IMPORT"){
 			line_stream >> ssfs_file;
 			std::string unix_file;
 			line_stream >> unix_file;
 			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
-			//import(ssfs_file,unix_file);
+			import(ssfs_file,unix_file);
 		}else if(command == "CAT"){
 			line_stream >> ssfs_file;
 			std::cout << "Contents of " << ssfs_file << std::endl;
-			//cat(ssfs_file);
+			ssfsCat(ssfs_file);
 		}else if(command == "DELETE"){
 			line_stream >> ssfs_file;
 			std::cout << "Deleting " << ssfs_file << std::endl;
@@ -90,8 +91,7 @@ void *read_file(void *arg){
 			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
 			//read(ssfs_file,start_byte,num_bytes);
 		}else if(command == "LIST"){
-			std::cout << "Listing" << std::endl;
-			//list();
+			list();
 		}else if(command == "SHUTDOWN"){
 			std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
 			//shutdown();
@@ -148,7 +148,6 @@ int main(int argc, char **argv){
 		std::cout << s2->direct_blocks[j] << std::endl;
 	}
 */
-
 	pthread_t p;
 	int rc;
 	for(int i = 2; i < argc; i++){
@@ -195,7 +194,7 @@ void build_inode_map() {
 
 	std::string line;
 	//Skip the first 5 lines of the file from the super block
-	
+
 	for(int i = 1; i < (num_blocks/block_size + 2); i++){
 		getline(disk, line, '\n');
 	}
@@ -295,54 +294,134 @@ void build_free_block_list() {
 // Disk Ops below ------------------------
 
 void deleteFile(std::string fileName){
-/*	int directsum = 0;
+	//create empty block to be written over indirect/double indirect
+	char * toWrite = new char[block_size];
+	char * zeroed = new char[4];
+	const char * temp = decimal_to_b60(0).c_str();
+	strcpy(zeroed,temp);
+	for(int i = 0;i<(block_size/4);i++){
+		strcat(toWrite,zeroed);
+	}
+	toWrite[block_size-1]='\n';
+	//empty direct
+	int directsum = 0;
 	if(!inode_map[fileName].direct_blocks.empty()){
 		for(int i = 0; i<inode_map[fileName].direct_blocks.size(); i++){
 			if(inode_map[fileName].direct_blocks[i]!=0){
-				sum += 1;
+				directsum += 1;
 				int freeIndex = inode_map[fileName].direct_blocks[i]-1;
 				free_block_list[freeIndex]= '0';
 			}
 		}
 	}
-	if(sum == 12){
-		ofstream
-		int indirectsum = 0;
-			for(i)
-	}
-	if(!inode_map[fileName].double_indirect_blocks.empty()){
-		for(int i = 0; i<inode_map[fileName].double_indirect_blocks.size(); i++){
-			for(int j = 0; j<inode_map[fileName].double_indirect_blocks[i].size(); j++){
-				int freeIndex = inode_map[fileName].double_indirect_blocks[i][j]-1;
-				free_block_list[freeIndex]= '0';
+	//free all indirect/double indirect blocks
+	if(directsum == 12){ //if direct_blocks are full
+		if(atCapacity(inode_map[fileName].indirect_block,0) == 1){ //if indirect_blocks are full
+			//Begin Reading line
+			ifstream diskFile;
+			diskFile.open(disk_file_name);
+			ofstream writeFile;
+			writeFile.open(disk_file_name);
+			//empty double indirect
+			int lineNum = inode_map[fileName].double_indirect_block;
+			int pos = std::ios_base::beg + ((lineNum -1) * block_size);
+			diskFile.seekg(pos);
+			std::string dibLine; //dibLine is string containing block
+			getline(diskFile,dibLine,'\n');
+			//Finish Reading line into string
+			int idremoveblock;
+			char * target = new char [dibLine.length()+1];
+  			strcpy (target, dibLine.c_str());
+			const char * p = strtok(target," ");
+			while(p!=NULL){ //for each number in double indirect
+				p = strtok(NULL," ");
+				idremoveblock = b60_to_decimal(p);
+				int id_linenum = idremoveblock; //Number of each indirect_block in double
+				int id_pos = std::ios_base::beg + ((id_linenum-1)*block_size);
+				diskFile.seekg(id_pos);
+				std::string ibLine;
+				getline(diskFile,ibLine,'\n');
+				int dblock;
+				char * idtarget = new char [ibLine.length()+1];
+	  			strcpy (idtarget, ibLine.c_str());
+				const char * q = strtok(idtarget," ");
+				while(q!=NULL){//for each numbre in indirect
+
+					q = strtok(NULL," ");
+					dblock = b60_to_decimal(q);
+					//free direct block
+					free_block_list[dblock] = 0;
+				}
+				//free each indirect_block and overwrite them
+				free_block_list[idremoveblock-1] = 0;
+				writeFile.seekp(id_pos);
+				writeFile.write(toWrite, block_size);
 			}
+			free_block_list[inode_map[fileName].double_indirect_block-1] = 0;
+			writeFile.seekp(pos);
+			writeFile.write(toWrite, block_size);
+			//finish emptying double indirect block
+			//start emptying indirect_block
+			int indirect_block_num = inode_map[fileName].indirect_block;
+			int indirect_pos = std::ios_base::beg + ((indirect_pos-1)*block_size);
+			int dblock;
+			diskFile.seekg(indirect_pos);
+			std::string indirect_line;
+			getline(diskFile,indirect_line,'\n');
+			char * id_line = new char[indirect_line.length()+1];
+			strcpy (id_line, indirect_line.c_str());
+			const char * blocknum = strtok(id_line," ");
+			while(blocknum!=NULL){
+
+				blocknum = strtok(NULL," ");
+				dblock = b60_to_decimal(blocknum);
+				free_block_list[dblock-1] = 0;
+			}
+			free_block_list[inode_map[fileName].indirect_block-1] = 0;
+			writeFile.seekp(indirect_pos);
+			writeFile.write(toWrite, block_size);
+			diskFile.close();
+			writeFile.close();
+			//finish emptying indirect_block
+
+		}else{ //if indirect_block isnt full
+			ifstream diskFile;
+			diskFile.open(disk_file_name);
+			ofstream writeFile;
+			writeFile.open(disk_file_name);
+			int indirect_block_num = inode_map[fileName].indirect_block;
+			int indirect_pos = std::ios_base::beg + ((indirect_pos-1)*block_size);
+			int dblock;
+			diskFile.seekg(indirect_pos);
+			std::string indirect_line;
+			getline(diskFile,indirect_line,'\n');
+			char * id_line = new char[indirect_line.length()+1];
+			strcpy (id_line, indirect_line.c_str());
+			const char * blocknum = strtok(id_line," ");
+			while(blocknum!=NULL){
+				blocknum = strtok(NULL," ");
+				dblock = b60_to_decimal(blocknum);
+				free_block_list[dblock-1] = 0;
+			}
+			free_block_list[inode_map[fileName].indirect_block-1] = 0;
+			writeFile.seekp(indirect_pos);
+			writeFile.write(toWrite, block_size);
+			diskFile.close();
+			writeFile.close();
 		}
+
 	}
-	if(!inode_map[fileName].indirect_blocks.empty()){
-		for(int i = 0; i<inode_map[fileName].indirect_blocks.size(); i++){
-			int freeIndex = inode_map[fileName].indirect_blocks[i]-1;
-			free_block_list[freeIndex]= '0';
-		}
-	}
-	int targetBlock = inode_map[fileName].location;
-	inode_map.erase(fileName);
-	free_block_list.push_back(targetBlock);
-	*/
+	free_block_list[inode_map[fileName].location] = 0;
+	return;
 }
 
-/*
 void list(){
 	//for each element in inodemap, display the inode->name and inode->size
-	map<string,inode>::iterator it = inode_map.begin();
-	string fileName;
-	//inode myNode;
-	int fileSize;
-		while(it!= inode_map.end()){
-		std::string fileName = it->first;
-		fileSize = inode_map[fileName].file_size;
-		std::cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes\n";
-//
-}*/
+	map<string,inode>::iterator it;
+	for(it = inode_map.begin(); it != inode_map.end(); it++){
+		std::cout << it->second.file_name << " size: " << it->second.file_size << " bytes" << std::endl;
+	}
+}
 
 /*bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 //	inode inode = inode_map[fname];
@@ -372,7 +451,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 	if(current_size < start_byte){
 		std::cout << "Start byte is out of range" << std::endl;
-		
+
 	} else {
 		std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 
@@ -389,7 +468,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 		int macro_traverse = 0;
 
 		while (traverse < 12 and num_bytes > 0) {
-			
+
 			int block = readme.direct_blocks[traverse];
 
 			disk.seekg((block-1)*(block_size) + (start_byte%(block_size-1)), std::ios::beg);
@@ -405,7 +484,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 				num_bytes -= (block_size - ((1 + start_byte)%(block_size-1)));
 			}
 
-			last += line;	
+			last += line;
 			traverse += 1;
 			start_byte = 0;
 
@@ -535,54 +614,75 @@ void read(std::string fname, int start_byte, int num_bytes){
 }
 
 int createFile(std::string fileName){
-/*
-	if(inode_map.count(fileName)==1){
-		std::cerr<< "create command failed, file named " << fileName << " already exists." << "\n";
-		return(0);
-	}else{
-		if(!free_block_list.empty()){
-			int targetblock = 0;
-			for(int i = 0;i<free_block_list.size();++i){
-				if(free_block_list[i] <= 262){
-					int targetblock = free_block_list[i];
-					break;
-				}
+	int freeblock = 0;
+	if(inode_map.count(fileName) == 0){
+		int start = ((num_blocks/block_size)-1)+3;
+		for(int i = start; i<start+256; i++){
+			if(free_block_list[i-1]==0){
+				freeblock = i;
+				free_block_list[i-1] = 1;
+				break;
 			}
-			if(!targetblock == 0){
-				//write inode data to the targetblock
-				inode myNode(fileName,0);
-				inode_map[filename] = myNode;
-				inode_map[fileName].location = targetblock;
-
-			}else{
-				std::cerr<<"create command failed, there is no room left on the inodeMap for " << fileName << "\n";
-				return(0);
-			}
+		}
+		if(freeblock != 0){
+		inode_map[fileName].file_name = fileName;
+		inode_map[fileName].file_size = 0;
+		inode_map[fileName].location = freeblock;
 		}else{
-			std::cerr<<"create command failed, there is no room left on the disk for " << fileName << "\n";
-			return(0);
+		std::cout << "There is no room in the inode map for " << fileName << std::endl;
+		}
+	}else{
+		std::cout << fileName << ": already exists" << std::endl;
+	}
+
+}
+
+/*STILL NEED TO ACCOUNT FOR IF THE UNIX FILE IS TOO LARGE*/
+void import(std::string ssfs_file, std::string unix_file){
+	std::ifstream unix_fstream (unix_file, std::ifstream::binary);
+	if(!unix_fstream) perror(unix_file.c_str());
+	
+	unix_fstream.seekg(0,unix_fstream.end);
+	int unix_bytesize = unix_fstream.tellg();
+	unix_fstream.seekg(0,unix_fstream.beg);
+
+	int blocks_left = 0;
+	for(int i = 0; i < free_block_list.size(); i++){
+		if(free_block_list[i] == '0'){
+			blocks_left++;
 		}
 	}
-	return(1);
-	*/
+
+	if(unix_bytesize > (blocks_left*block_size)){
+		std::cerr << unix_file << ": File is too large" << std::endl;
+		return;
+	}
+
+	if(inode_map.count(ssfs_file) == 0){
+	//if the file doesn't exist, create it
+		createFile(ssfs_file);
+	}
+
+	char ch;
+	int curr_byte = 1;
+	//std::cout << "begin import" << std::endl;
+	while(unix_fstream >> noskipws >> ch){
+		//std::cout << ch;
+		//write(ssfs_file,ch,curr_byte,1);
+		curr_byte++;
+	}
+	//std::cout << std::endl;
+
 }
 
 void ssfsCat(std::string fileName){
-	/*
-	int targetBlock;
-	char * buffer = new char[block_size];
-	int offset = (targetBlock-1)*block_size;
-	FILE * pfile;
-	const char * diskfile = disk_file_name.c_str();
-	pfile= fopen(diskfile,"r");
-	fseek(pfile,offset,SEEK_SET);
-	fgets(buffer,block_size,pfile);
-//	inode myNode = inode_map[fileName];
-//	int fileSize = myNode.file_size;
-	//read(fileName, 0, fileSize);
-	*/
+	if(inode_map.count(fileName) != 0){
+		read(fileName,1,inode_map[fileName].file_size);
+	}else{
+		std::cout << fileName << ": No such file" << std::endl;
+	}
 }
-/*
+
 int add_blocks(std::string fname, int num_blocks){
 	inode target_inode = inode(fname, inode_map[fname].file_size);
 	int not_taken = -1;
@@ -602,7 +702,6 @@ int add_blocks(std::string fname, int num_blocks){
 		}
 		else{
 
-			target_inode.direct_blocks[not_taken] = block;
 			//reading free block liist
 			int block = -1;
 			for(i = (int)(3+(num_blocks/(block_size-1)))+256; i < free_block_list.size(); i++){
@@ -626,7 +725,7 @@ int add_blocks(std::string fname, int num_blocks){
 	}
 	// this is the indirect block level
 	//notes: block_size/sizeof(int)
-	if(at_capacity(target_inode.indirect_blocks, 0) == 0){
+	if(atCapacity(target_inode.indirect_block, 0) == 0){
 		while(num_blocks != 0){
 			int block = -1;
 			for(i = (int)(3+(num_blocks/(block_size-1)))+256; i < free_block_list.size(); i++){
@@ -634,56 +733,52 @@ int add_blocks(std::string fname, int num_blocks){
 					block = i-1;
 					free_block_list[i] = 1;
 					break;
-				}	
+				}
 			}
 			if(block == -1){
 				return -1;
 			}
 			else{
 			//writing to indirect block
-				int ind_blk = target_inode.indirect_blocks;
-				ifstream diskFile;
-				diskFile.open(disk_file_name);
-				int pos = std::ios_base::beg + ((lineNum -1) * block_size);
-				diskFile.seekg(pos);
+				int ind_blk = target_inode.indirect_block;
+				ifstream idiskFile;
+				ofstream odiskFile;
+				idiskFile.open(disk_file_name);
+				int pos = std::ios_base::beg + ((ind_blk -1) * block_size);
+				idiskFile.seekg(pos);
 				std::string ibLine;
-				getline(diskFile,ibLine,'\n');
+				getline(idiskFile,ibLine,'\n');
 				std::size_t found = ibLine.find("0",0);
-				diskFile.close();
-				ofs.open(disk_file_name, std:: ofstream::out);
-				seekp(pos + (int)found);
-				ofs.write((itoa(block)), 
-				
+				idiskFile.close();
+				odiskFile.open(disk_file_name, std:: ofstream::out);
+			//	this is the part I'm having a hard time with, gotta write
+			//	to the disk here and getting that address and inserting
+			//	the right number is what i was figuring out when my computer
+			//	broke.
+			//	seekp(pos + (int)found);
+			//	ofs.write((itoa(block))), 
+				odiskFile.close();
 				 
 			//
 			}
 			num_blocks--;
 					
-			}
-				else{break;}
+			
 		}
 	}
 	if(num_blocks == 0){
 		return 0;
 	}
 	//this is the double indirect level
-	if(at_capacity(target_inode.indirect_blocks, 0) == 0){
-		while(num_blocks != 0){
-			if(target_inode.double_indirect_blocks.size() < (block_size/sizeof(int))){
-				int block = 2;
-				if(target_inode.double_indirect_blocks.back().size() < (block_size/sizeof(int))){
-					target_inode.
-					free_block_list.pop_back();
-					num_blocks--;
-				}
-			else{break;}
+	if(atCapacity(target_inode.indirect_block, 0) == 0){
+	//	while(num_blocks != 0){
 //return false;
-			}
-		}
+	//		}
+	//	}
 	}
 	return -1;
 }
-*/
+
 void shutdown_globals() {
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
@@ -928,34 +1023,38 @@ int atCapacity(int lineNum,int flag){
 		diskFile.seekg(pos);
 		std::string ibLine;
 		getline(diskFile,ibLine,'\n');
-		std::size_t found = ibLine.find("0",0);
+		const char * empty = decimal_to_b60(0).c_str();
+		std::size_t found = ibLine.find(empty,0);
 		if(found != std::string::npos){
+			diskFile.close();
 			return(0);
 		}else{
+			diskFile.close();
 			return(1);
 		}
 	}else if(flag == 1){
-		int capCount = 0;
-		int capacity = block_size / sizeof(int);
 		ifstream diskFile;
 		diskFile.open(disk_file_name);
 		int pos = std::ios_base::beg + ((lineNum -1) * block_size);
 		diskFile.seekg(pos);
 		std::string ibLine;
 		getline(diskFile,ibLine,'\n');
-		std::size_t found = ibLine.find("0",0);
+		const char * empty = decimal_to_b60(0).c_str();
+		std::size_t found = ibLine.find(empty,0);
 		if(found != std::string::npos){
+			diskFile.close();
 			return(0);
 		}else{
-			std::stringstream ss(ibLine);
 			int lastidblock;
-			while(1) {
-			   ss >> lastidblock;
-			   if(!ss)
-			      break;
+			char * target = new char [ibLine.length()+1];
+  			strcpy (target, ibLine.c_str());
+			const char * p = strtok(target," ");
+			while(p!=NULL){
+				lastidblock = b60_to_decimal(p);
+				p = strtok(NULL," ");
 			}
+			diskFile.close();
 			atCapacity(lineNum,lastidblock);
 		}
 	}
-
 }
