@@ -147,7 +147,6 @@ int main(int argc, char **argv){
 		std::cout << s2->direct_blocks[j] << std::endl;
 	}
 */
-
 	pthread_t p;
 	int rc;
 	for(int i = 2; i < argc; i++){
@@ -317,19 +316,13 @@ void deleteFile(std::string fileName){
 	*/
 }
 
-/*
 void list(){
 	//for each element in inodemap, display the inode->name and inode->size
-	map<string,inode>::iterator it = inode_map.begin();
-	string fileName;
-	//inode myNode;
-	int fileSize;
-		while(it!= inode_map.end()){
-		std::string fileName = it->first;
-		fileSize = inode_map[fileName].file_size;
-		std::cout << "Name: " << fileName << "::Size: "<< fileSize << " bytes\n";
-//
-}*/
+	map<string,inode>::iterator it;
+	for(it = inode_map.begin(); it != inode_map.end(); it++){
+		std::cout << it->second.file_name << " size: " << it->second.file_size << std::endl;
+	}
+}
 
 /*bool write(std::string fname, char to_write, int start_byte, int num_bytes){
 //	inode inode = inode_map[fname];
