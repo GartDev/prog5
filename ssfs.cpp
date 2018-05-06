@@ -476,9 +476,21 @@ int add_blocks(std::string fname, int num_blocks){
 				std::ofstream ofs;
 				std::ifstream ifs;
 				ifs.open(disk_file_name, std::ifstream::in);
-				seekp(std::ios_base::beg, (block-1)block_size);
-				string line = getline();
-			//	
+				seekg(std::ios_base::beg, (block-1)block_size);
+				string line;
+				getline(ifs, line);
+				char * cline = new char [line.length()+1];
+				std::strcpy(cline, line.c_str());
+				char * pieces = std::strtok(cline, " ");
+				ifs.close();
+				int l;
+				int entry;
+				for(l = 0; word[l] != '\0'; l++){
+					
+				}
+				ofs.open(disk_file_name, std:: ifstream::out);
+				
+			//
 			}
 			num_blocks--;
 					
