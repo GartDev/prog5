@@ -277,6 +277,7 @@ void build_free_block_list() {
 // Disk Ops below ------------------------
 
 void deleteFile(std::string fileName){
+	//checks if all direct blocks are used and readds them to free_block_list
 	int directsum = 0;
 	if(!inode_map[fileName].direct_blocks.empty()){
 		for(int i = 0; i<inode_map[fileName].direct_blocks.size(); i++){
@@ -287,16 +288,18 @@ void deleteFile(std::string fileName){
 			}
 		}
 	}
-	if(directsum == 12){ //if direct_blocks are full
+
+		if(directsum == 12){ //if direct_blocks are full
 		if(atCapacity(inode_map[fileName].indirect_block) == 1){ //if indirect_blocks are full
-			std::vector<int> theCroc;
+			//Begin Reading line
 			ifstream diskFile;
 			diskFile.open(disk_file_name);
 			lineNum = inode_map[fileName].double_indirect_block;
 			int pos = std::ios_base::beg + ((lineNum -1) * block_size);
 			diskFile.seekg(pos);
-			std::string ibLine;
+			std::string ibLine; //ibLine is string containing block
 			getline(diskFile,ibLine,'\n');
+			//Finish Reading line into string
 			std::stringstream ss(ibLine);
 			int removeblock;
 			while(1) {
@@ -329,7 +332,7 @@ void deleteFile(std::string fileName){
 				}
 			}
 			diskfile.close();
-			return(0);
+			return;
 		}
 	}
 }
@@ -782,12 +785,13 @@ int atCapacity(int lineNum,int flag){
 		diskFile.seekg(pos);
 		std::string ibLine;
 		getline(diskFile,ibLine,'\n');
-		std::size_t found = ibLine.find("0",0);
+		const char * empty = decimal_to_b60(0);
+		std::size_t found = ibLine.find(empty,0);
 		if(found != std::string::npos){
-			diskfile.close();
+			diskFile.close();
 			return(0);
 		}else{
-			diskfile.close();
+			diskFile.close();
 			return(1);
 		}
 	}else if(flag == 1){
@@ -797,19 +801,21 @@ int atCapacity(int lineNum,int flag){
 		diskFile.seekg(pos);
 		std::string ibLine;
 		getline(diskFile,ibLine,'\n');
-		std::size_t found = ibLine.find("0",0);
+		const char * empty = decimal_to_b60(0);
+		std::size_t found = ibLine.find(empty,0);
 		if(found != std::string::npos){
-			diskfile.close();
+			diskFile.close();
 			return(0);
 		}else{
-			std::stringstream ss(ibLine);
 			int lastidblock;
-			while(1) {
-			   ss >> lastidblock;
-			   if(!ss)
-			      break;
+			char * target = new char [ibLine.length()+1];
+  			strcpy (target, ibLine.c_str());
+			const char * p = strtok(target," ");
+			while(p!=NULL){
+				lastidblock = b60_to_decimal(p);
+				p = strtok(NULL," ");
 			}
-			diskfile.close();
+			diskFile.close();
 			atCapacity(lineNum,lastidblock);
 		}
 	}
