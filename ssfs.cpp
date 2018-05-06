@@ -38,6 +38,7 @@ void ssfsCat(std::string fileName);
 void list();
 int atCapacity(int lineNum,int flag);
 void shutdown_globals();
+void import(std::string ssfs_file, std::string unix_file);
 
 void *read_file(void *arg){
 	std::ifstream opfile;
@@ -488,6 +489,41 @@ int createFile(std::string fileName){
 	}
 	return(1);
 	*/
+}
+
+/*STILL NEED TO ACCOUNT FOR IF THE UNIX FILE IS TOO LARGE*/
+void import(std::string ssfs_file, std::string unix_file){
+	std::ifstream unix_fstream (unix_file, std::ifstream::binary);
+	if(!unix_fstream) perror(unix_file.c_str());
+	
+	unix_fstream.seekg(0,unix_fstream.end);
+	int unix_bytesize = unix_fstream.tellg();
+	unix_fstream.seekg(0,unix_fstream.beg);
+
+	int blocks_left = 0;
+	for(int i = 0; i < free_block_list.size(); i++){
+		if(free_block_list[i] == '0'){
+			blocks_left++;
+		}
+	}
+
+	if(unix_bytesize > (blocks_left*block_size)){
+		std::cerr << unix_file << ": File is too large" << std::endl;
+		return;
+	}
+
+	if(inode_map.count(ssfs_file) == 0){
+	//if the file doesn't exist, create it
+		//create(ssfs_file);
+	}
+
+	char ch;
+	int curr_byte = 1;
+	while(unix_fstream >> noskipws >> ch){
+		//write(ssfs_file,ch,curr_byte,1);
+		curr_byte++;
+	}
+
 }
 
 void ssfsCat(std::string fileName){
