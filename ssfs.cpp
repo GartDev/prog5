@@ -59,13 +59,13 @@ void *read_file(void *arg){
 		if(command == "CREATE"){
 			line_stream >> ssfs_file;
 			std::cout << "Creating " << ssfs_file << std::endl;
-			//create(ssfs_file);
+			createFile(ssfs_file);
 		}else if(command == "IMPORT"){
 			line_stream >> ssfs_file;
 			std::string unix_file;
 			line_stream >> unix_file;
 			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
-			//import(ssfs_file,unix_file);
+			import(ssfs_file,unix_file);
 		}else if(command == "CAT"){
 			line_stream >> ssfs_file;
 			std::cout << "Contents of " << ssfs_file << std::endl;
@@ -559,15 +559,18 @@ void import(std::string ssfs_file, std::string unix_file){
 
 	if(inode_map.count(ssfs_file) == 0){
 	//if the file doesn't exist, create it
-		//create(ssfs_file);
+		createFile(ssfs_file);
 	}
 
 	char ch;
 	int curr_byte = 1;
+	//std::cout << "begin import" << std::endl;
 	while(unix_fstream >> noskipws >> ch){
+		//std::cout << ch;
 		//write(ssfs_file,ch,curr_byte,1);
 		curr_byte++;
 	}
+	//std::cout << std::endl;
 
 }
 
