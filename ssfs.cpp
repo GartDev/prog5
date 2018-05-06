@@ -68,7 +68,7 @@ void *read_file(void *arg){
 		}else if(command == "CAT"){
 			line_stream >> ssfs_file;
 			std::cout << "Contents of " << ssfs_file << std::endl;
-			//cat(ssfs_file);
+			ssfsCat(ssfs_file);
 		}else if(command == "DELETE"){
 			line_stream >> ssfs_file;
 			std::cout << "Deleting " << ssfs_file << std::endl;
@@ -90,8 +90,7 @@ void *read_file(void *arg){
 			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
 			//read(ssfs_file,start_byte,num_bytes);
 		}else if(command == "LIST"){
-			std::cout << "Listing" << std::endl;
-			//list();
+			list();
 		}else if(command == "SHUTDOWN"){
 			std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
 			//shutdown();
@@ -332,7 +331,7 @@ void list(){
 	//for each element in inodemap, display the inode->name and inode->size
 	map<string,inode>::iterator it;
 	for(it = inode_map.begin(); it != inode_map.end(); it++){
-		std::cout << it->second.file_name << " size: " << it->second.file_size << std::endl;
+		std::cout << it->second.file_name << " size: " << it->second.file_size << " bytes" << std::endl;
 	}
 }
 
@@ -460,20 +459,13 @@ int createFile(std::string fileName){
 }
 
 void ssfsCat(std::string fileName){
-	/*
-	int targetBlock;
-	char * buffer = new char[block_size];
-	int offset = (targetBlock-1)*block_size;
-	FILE * pfile;
-	const char * diskfile = disk_file_name.c_str();
-	pfile= fopen(diskfile,"r");
-	fseek(pfile,offset,SEEK_SET);
-	fgets(buffer,block_size,pfile);
-//	inode myNode = inode_map[fileName];
-//	int fileSize = myNode.file_size;
-	//read(fileName, 0, fileSize);
-	*/
+	if(inode_map.count(fileName) != 0){
+		read(fileName,1,inode_map[fileName].file_size);
+	}else{
+		std::cout << fileName << ": No such file" << std::endl;
+	}
 }
+
 /*
 int add_blocks(std::string fname, int num_blocks){
 	inode target_inode = inode(fname, inode_map[fname].file_size);
