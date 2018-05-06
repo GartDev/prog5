@@ -24,9 +24,9 @@ class inode {
 	}
 
         std::string file_name;
-		int location;
+	int location;
         int file_size;
         std::vector<int> direct_blocks;
         int indirect_block;
-		int double_indirect_block;
+	int double_indirect_block;
 };
