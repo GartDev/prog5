@@ -26,14 +26,14 @@ void build_inode_map();
 void build_free_block_list();
 
 int b60_to_decimal(const char * target);
-const char * decimal_to_b60(int target);
+std::string decimal_to_b60(int target);
 
 std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 int createFile(std::string fileName);
 void deleteFile(std::string fileName);
 //bool write(std::string fname, char to_write, int start_byte, int num_bytes);
-//void read(std::string fname, int start_byte, int num_bytes);
+void read(std::string fname, int start_byte, int num_bytes);
 void ssfsCat(std::string fileName);
 void list();
 int atCapacity(int lineNum,int flag);
@@ -115,9 +115,10 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
-	std::cout << "Conversion: " << decimal_to_b60(19021) << std::endl;
+	read("sample.txt", 20, 1000);
 
 	shutdown_globals();
+
 /*
 	inode * s = new inode("sample.txt", 128);
 
@@ -229,14 +230,16 @@ void build_inode_map() {
 //					std::cout << "size: " << this_node.file_size << std::endl;
 				}else if(data_num == 3){
 					std::istringstream token_stream(token);
+					int i = 0;
 					while(getline(token_stream,token,' ')){
-						//std::cout << "sub token " << data_num <<  ": " << token << std::endl;
+//						std::cout << "sub token " << data_num <<  ": " << token << std::endl;
 						std::stringstream hex_conv;
 						int block;
 						hex_conv << std::hex << token;
 						hex_conv >> block;
 //						std::cout << "block: " << block << std::endl;
-						this_node.direct_blocks.push_back(block);
+						this_node.direct_blocks[i] = block;
+						i++;
 					}
 //					std::cout << std::endl;
 				}else if(data_num == 4){
@@ -252,6 +255,8 @@ void build_inode_map() {
 				}
 				data_num++;
 			}
+			inode_map[this_node.file_name] = this_node;
+
 			counter++;
 	}
 	//std::cout << counter << std::endl;
@@ -292,7 +297,7 @@ void deleteFile(std::string fileName){
 		int indirectsum = 0;
 			for(i)
 	}
-	/*if(!inode_map[fileName].double_indirect_blocks.empty()){
+	if(!inode_map[fileName].double_indirect_blocks.empty()){
 		for(int i = 0; i<inode_map[fileName].double_indirect_blocks.size(); i++){
 			for(int j = 0; j<inode_map[fileName].double_indirect_blocks[i].size(); j++){
 				int freeIndex = inode_map[fileName].double_indirect_blocks[i][j]-1;
@@ -346,23 +351,53 @@ void list(){
 //	}
 }*/
 
-/*
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
 
-	inode myNode = inode_map[fname];
+	inode readme = inode_map[fname];
+	int current_size = readme.file_size;
 
-	int current_size = myNode.file_size;
-	int real_read_length = num_bytes;
 	if(current_size < start_byte){
 		std::cout << "Start byte is out of range" << std::endl;
-	}
-	if((start_byte + num_bytes) > file_size){
-		real_read_length =((start_byte + num_bytes) - file_size);
-	}
+		
+	} else {
+		std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 
+		std::string last = "";
+
+		if((start_byte + num_bytes) > current_size){
+			num_bytes = current_size - start_byte;
+		}
+
+		int traverse = start_byte / block_size;
+		int track = start_byte % block_size;
+
+		while (traverse < 12 and num_bytes > 0) {
+			int block = readme.direct_blocks[traverse];
+
+			disk.seekg((block-1)*(block_size) + track, std::ios::beg);
+
+			std::string line;
+			getline(disk, line, '\n');
+
+			line = line.substr(0, std::min(num_bytes, block_size-track));
+			num_bytes -= (block_size-track);
+
+			last += line;	
+			traverse += 1;
+			num_bytes -= 1;
+			track = 0;
+
+		} while (traverse >= 12 and traverse < (12+(block_size/4))) {
+			// check the indirect blocks
+		} while (traverse >= (12+(block_size/4))) {
+			// check the double indirect blocks
+		} 
+
+		std::cout << last << std::endl;
+
+	}
 }
-*/
 
 int createFile(std::string fileName){
 /*
@@ -563,26 +598,26 @@ void shutdown_globals() {
 
 	disk.seekp(std::ios_base::beg + (loops+2)*block_size + num_blocks);
 
-	inode sample;
-	sample.file_name = "sample.txt";
-	sample.file_size = 128;
-	sample.location = (num_blocks/(block_size-1))+3;
-	sample.direct_blocks[0] = 320;
-	sample.direct_blocks[1] = 990;
-	sample.direct_blocks[2] = 900;
-	sample.double_indirect_block = 444;
-
-	inode sample2;
-	sample2.file_name = "sample2.txt";
-	sample2.file_size = 256;
-	sample2.location = sample.location+1;
-	sample2.direct_blocks[0] = 333;
-	sample2.direct_blocks[1] = 991;
-	sample2.direct_blocks[2] = 1000;
-	sample2.indirect_block = 902;
-
-	inode_map["sample.txt"] = sample;
-	inode_map["sample2.txt"] = sample2;
+//	inode sample;
+//	sample.file_name = "sample.txt";
+//	sample.file_size = 128;
+//	sample.location = (num_blocks/(block_size-1))+3;
+//	sample.direct_blocks[0] = 320;
+//	sample.direct_blocks[1] = 990;
+//	sample.direct_blocks[2] = 900;
+//	sample.double_indirect_block = 444;
+//
+//	inode sample2;
+//	sample2.file_name = "sample2.txt";
+//	sample2.file_size = 256;
+//	sample2.location = sample.location+1;
+//	sample2.direct_blocks[0] = 333;
+//	sample2.direct_blocks[1] = 991;
+//	sample2.direct_blocks[2] = 1000;
+//	sample2.indirect_block = 902;
+//
+//	inode_map["sample.txt"] = sample;
+//	inode_map["sample2.txt"] = sample2;
 
 	std::map<std::string, inode>::iterator it;
 
@@ -668,21 +703,15 @@ int b60_to_decimal(const char * target) {
 	return ret;
 }
 
-const char * decimal_to_b60(int target) {
-	std::string first = "";
-	std::string second = "";
-	std::string third = "";	
-	char f;
-	char s;
-	char t;
-
+std::string decimal_to_b60(int target) {
+	std::string ret = "";
 	int num;
 
 	if (target >= 3600) {
 		num = (target / 3600);
 
 		if (num <= 9) {
-			first = std::to_string(num);
+			ret += std::to_string(num);
 
 		} else {
 			num += 55;
@@ -691,9 +720,10 @@ const char * decimal_to_b60(int target) {
 				num += 6;
 			}
 
-			f = char(num);
-			first = std::string(1, f);
+			ret += char(num);
 		}
+	} else {
+		ret += "0";
 	}
 
 	target %= 3600;
@@ -702,7 +732,7 @@ const char * decimal_to_b60(int target) {
 		num = (target / 60);
 
 		if (num <= 9) {
-			second = std::to_string(num);
+			ret += std::to_string(num);
 		} else {
 			num += 55;
 
@@ -710,9 +740,10 @@ const char * decimal_to_b60(int target) {
 				num += 6;
 			}
 
-			s = char(num);
-			second = std::string(1, s);
+			ret += char(num);
 		}
+	} else {
+		ret += "0";
 	}
 
 	target %= 60;
@@ -720,7 +751,7 @@ const char * decimal_to_b60(int target) {
 	num = target;
 
 	if (num <= 9) {
-		third = std::to_string(num);
+		ret += std::to_string(num);
 	} else {
 		num += 55;
 
@@ -728,13 +759,10 @@ const char * decimal_to_b60(int target) {
 			num += 6;
 		}
 
-		t = char(num);
-		third = std::string(1, t);
+		ret += char(num);
 	}
 
-	std::string ret = first + second + third;
-
-	return ret.c_str();
+	return ret;
 
 }
 
