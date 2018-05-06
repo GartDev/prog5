@@ -507,13 +507,20 @@ int add_blocks(std::string fname, int num_blocks){
 			else{
 			//writing to indirect block
 				int ind_blk = target_inode.indirect_blocks;
-				num_blocks--;
-				std::ofstream ofs;
-				std::ifstream ifs;
-				ifs.open(disk_file_name, std::ifstream::in);
-				seekp(std::ios_base::beg, (block-1)block_size);
-				string line = getline();
-			//	
+				ifstream diskFile;
+				diskFile.open(disk_file_name);
+				int pos = std::ios_base::beg + ((lineNum -1) * block_size);
+				diskFile.seekg(pos);
+				std::string ibLine;
+				getline(diskFile,ibLine,'\n');
+				std::size_t found = ibLine.find("0",0);
+				diskFile.close();
+				ofs.open(disk_file_name, std:: ofstream::out);
+				seekp(pos + (int)found);
+				ofs.write((itoa(block)), 
+				
+				 
+			//
 			}
 			num_blocks--;
 					
