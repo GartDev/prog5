@@ -294,7 +294,7 @@ void build_free_block_list() {
 // Disk Ops below ------------------------
 
 void deleteFile(std::string fileName){
-	//checks if all direct blocks are used and readds them to free_block_list
+	/*//checks if all direct blocks are used and readds them to free_block_list
 	int directsum = 0;
 	if(!inode_map[fileName].direct_blocks.empty()){
 		for(int i = 0; i<inode_map[fileName].direct_blocks.size(); i++){
@@ -314,21 +314,27 @@ void deleteFile(std::string fileName){
 			lineNum = inode_map[fileName].double_indirect_block;
 			int pos = std::ios_base::beg + ((lineNum -1) * block_size);
 			diskFile.seekg(pos);
-			std::string ibLine; //ibLine is string containing block
+			std::string dibLine; //ibLine is string containing block
 			getline(diskFile,ibLine,'\n');
 			//Finish Reading line into string
-			std::stringstream ss(ibLine);
-			int removeblock;
-			while(1) {
-			   ss >> removeblock;
-			   if(!stream){
-      				break;
-				}
+			int idremoveblock;
+			char * target = new char [dibLine.length()+1];
+  			strcpy (target, dibLine.c_str());
+			const char * p = strtok(target," ");
+			while(p!=NULL){
+				idreoveblock = b60_to_decimal(p);
+				p = strtok(NULL," ");
+			}
+
+
+		/*	iterate through the double indirect block to find the indirect blocks numbers
+
 				if(removeblock!=0){
 					theCroc.push_back(removeblock);
 					free_block_list[removeblock-1] = 0;
 				}
 			}
+
 		}else{ //if indirect_block isnt full
 			ifstream diskFile;
 			diskFile.open(disk_file_name);
@@ -337,7 +343,7 @@ void deleteFile(std::string fileName){
 			diskFile.seekg(pos);
 			std::string ibLine;
 			getline(diskFile,ibLine,'\n');
-			std::stringstream ss(ibLine);
+
 			int removeblock;
 			while(1) {
 			   ss >> removeblock;
@@ -352,6 +358,7 @@ void deleteFile(std::string fileName){
 			return;
 		}
 	}
+	*/
 }
 
 /*
@@ -852,7 +859,7 @@ int atCapacity(int lineNum,int flag){
 		diskFile.seekg(pos);
 		std::string ibLine;
 		getline(diskFile,ibLine,'\n');
-		const char * empty = decimal_to_b60(0);
+		const char * empty = decimal_to_b60(0).c_str();
 		std::size_t found = ibLine.find(empty,0);
 		if(found != std::string::npos){
 			diskFile.close();
@@ -868,7 +875,7 @@ int atCapacity(int lineNum,int flag){
 		diskFile.seekg(pos);
 		std::string ibLine;
 		getline(diskFile,ibLine,'\n');
-		const char * empty = decimal_to_b60(0);
+		const char * empty = decimal_to_b60(0).c_str();
 		std::size_t found = ibLine.find(empty,0);
 		if(found != std::string::npos){
 			diskFile.close();
