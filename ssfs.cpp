@@ -115,6 +115,8 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
+	std::cout << "Conversion: " << decimal_to_b60(19021) << std::endl;
+
 	shutdown_globals();
 /*
 	inode * s = new inode("sample.txt", 128);
@@ -496,8 +498,20 @@ int add_blocks(std::string fname, int num_blocks){
 				std::ofstream ofs;
 				std::ifstream ifs;
 				ifs.open(disk_file_name, std::ifstream::in);
-				seekp(std::ios_base::beg, (block-1)block_size);
-				string line = getline();
+				seekg(std::ios_base::beg, (block-1)block_size);
+				string line;
+				getline(ifs, line);
+				char * cline = new char [line.length()+1];
+				std::strcpy(cline, line.c_str());
+				char * pieces = std::strtok(cline, " ");
+				ifs.close();
+				int l;
+				int entry;
+				for(l = 0; word[l] != '\0'; l++){
+
+				}
+				ofs.open(disk_file_name, std:: ifstream::out);
+
 			//
 			}
 			num_blocks--;
@@ -686,6 +700,76 @@ int b60_to_decimal(const char * target) {
 	}
 
 	return ret;
+}
+
+const char * decimal_to_b60(int target) {
+	std::string first = "";
+	std::string second = "";
+	std::string third = "";
+	char f;
+	char s;
+	char t;
+
+	int num;
+
+	if (target >= 3600) {
+		num = (target / 3600);
+
+		if (num <= 9) {
+			first = std::to_string(num);
+
+		} else {
+			num += 55;
+
+			if (num > 90) {
+				num += 6;
+			}
+
+			f = char(num);
+			first = std::string(1, f);
+		}
+	}
+
+	target %= 3600;
+
+	if (target >= 60) {
+		num = (target / 60);
+
+		if (num <= 9) {
+			second = std::to_string(num);
+		} else {
+			num += 55;
+
+			if (num > 90) {
+				num += 6;
+			}
+
+			s = char(num);
+			second = std::string(1, s);
+		}
+	}
+
+	target %= 60;
+
+	num = target;
+
+	if (num <= 9) {
+		third = std::to_string(num);
+	} else {
+		num += 55;
+
+		if (num > 90) {
+			num += 6;
+		}
+
+		t = char(num);
+		third = std::string(1, t);
+	}
+
+	std::string ret = first + second + third;
+
+	return ret.c_str();
+
 }
 
 int atCapacity(int lineNum,int flag){
