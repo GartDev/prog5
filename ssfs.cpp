@@ -543,7 +543,6 @@ void ssfsCat(std::string fileName){
 	}
 }
 
-/*
 int add_blocks(std::string fname, int num_blocks){
 	inode target_inode = inode(fname, inode_map[fname].file_size);
 	int not_taken = -1;
@@ -563,7 +562,6 @@ int add_blocks(std::string fname, int num_blocks){
 		}
 		else{
 
-			target_inode.direct_blocks[not_taken] = block;
 			//reading free block liist
 			int block = -1;
 			for(i = (int)(3+(num_blocks/(block_size-1)))+256; i < free_block_list.size(); i++){
@@ -587,7 +585,7 @@ int add_blocks(std::string fname, int num_blocks){
 	}
 	// this is the indirect block level
 	//notes: block_size/sizeof(int)
-	if(at_capacity(target_inode.indirect_blocks, 0) == 0){
+	if(atCapacity(target_inode.indirect_block, 0) == 0){
 		while(num_blocks != 0){
 			int block = -1;
 			for(i = (int)(3+(num_blocks/(block_size-1)))+256; i < free_block_list.size(); i++){
@@ -602,49 +600,45 @@ int add_blocks(std::string fname, int num_blocks){
 			}
 			else{
 			//writing to indirect block
-				int ind_blk = target_inode.indirect_blocks;
-				ifstream diskFile;
-				diskFile.open(disk_file_name);
-				int pos = std::ios_base::beg + ((lineNum -1) * block_size);
-				diskFile.seekg(pos);
+				int ind_blk = target_inode.indirect_block;
+				ifstream idiskFile;
+				ofstream odiskFile;
+				idiskFile.open(disk_file_name);
+				int pos = std::ios_base::beg + ((ind_blk -1) * block_size);
+				idiskFile.seekg(pos);
 				std::string ibLine;
-				getline(diskFile,ibLine,'\n');
+				getline(idiskFile,ibLine,'\n');
 				std::size_t found = ibLine.find("0",0);
-				diskFile.close();
-				ofs.open(disk_file_name, std:: ofstream::out);
-				seekp(pos + (int)found);
-				ofs.write((itoa(block)),
-
-
+				idiskFile.close();
+				odiskFile.open(disk_file_name, std:: ofstream::out);
+			//	this is the part I'm having a hard time with, gotta write
+			//	to the disk here and getting that address and inserting
+			//	the right number is what i was figuring out when my computer
+			//	broke.
+			//	seekp(pos + (int)found);
+			//	ofs.write((itoa(block))), 
+				odiskFile.close();
+				 
 			//
 			}
 			num_blocks--;
-
-			}
-				else{break;}
+					
+			
 		}
 	}
 	if(num_blocks == 0){
 		return 0;
 	}
 	//this is the double indirect level
-	if(at_capacity(target_inode.indirect_blocks, 0) == 0){
-		while(num_blocks != 0){
-			if(target_inode.double_indirect_blocks.size() < (block_size/sizeof(int))){
-				int block = 2;
-				if(target_inode.double_indirect_blocks.back().size() < (block_size/sizeof(int))){
-					target_inode.
-					free_block_list.pop_back();
-					num_blocks--;
-				}
-			else{break;}
+	if(atCapacity(target_inode.indirect_block, 0) == 0){
+	//	while(num_blocks != 0){
 //return false;
-			}
-		}
+	//		}
+	//	}
 	}
 	return -1;
 }
-*/
+
 void shutdown_globals() {
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
