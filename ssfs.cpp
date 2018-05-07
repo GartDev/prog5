@@ -117,7 +117,7 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
-	write("sample3.txt", 'c', 0, 2500);
+	//write("sample3.txt", 'c', 0, 200);
 
 	shutdown_globals();
 
@@ -998,7 +998,6 @@ int createFile(std::string fileName){
 
 }
 
-/*STILL NEED TO ACCOUNT FOR IF THE UNIX FILE IS TOO LARGE*/
 void import(std::string ssfs_file, std::string unix_file){
 	std::ifstream unix_fstream (unix_file, std::ifstream::binary);
 	if(!unix_fstream) perror(unix_file.c_str());
