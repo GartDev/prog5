@@ -32,7 +32,7 @@ std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 int createFile(std::string fileName);
 void deleteFile(std::string fileName);
-//bool write(std::string fname, char to_write, int start_byte, int num_bytes);
+int write(std::string fname, char to_write, int start_byte, int num_bytes);
 void read(std::string fname, int start_byte, int num_bytes);
 void ssfsCat(std::string fileName);
 void list();
@@ -424,25 +424,133 @@ void list(){
 	}
 }
 
-/*bool write(std::string fname, char to_write, int start_byte, int num_bytes){
-//	inode inode = inode_map[fname];
-}
-
+int write(std::string fname, char to_write, int start_byte, int num_bytes){
+	inode target = inode_map[fname];
+	int control = 0;
 	//check file size, return error if start_byte is out of bounds
-//	int current_size = inode.file_size;
-//	if(current_size < start_byte){
-		return false;
-//	}
+	int current_size = target.file_size;
+	if(current_size < start_byte){
+		std::cout << "Start byte is out of range" << std::endl;
+	}
 	//check if file needs to be extended
-//	if(current_size	< (start_byte + num_bytes)){
+	else if(current_size < (start_byte + num_bytes)){
 		if(sizeof(free_block_list) == 0){
-			return false;
+			return 1;
 		}
 		else{
-		//expand the file
+			//expand file
+			std::cout << "add_blocks() ain't work yet sorry" << std::endl;
+			return 1;
 		}
-//	}
-}*/
+	}
+	else{
+		std::ofstream disk(disk_file_name, std::ofstream::out);
+
+		int num_blocks = num_bytes / (block_size-1);
+		int start_block = start_byte/ (block_size-1);
+		int block = target.direct_blocks[start_block];
+		int traverse = start_byte / (block_size-1);
+
+		disk.seekp((block-1)*(block_size) + (start_byte%(block_size-1)), std::ios::beg);
+		int written;
+		int loops = 0;
+		
+		while(start_block < 12 && num_bytes > 0) {
+			
+			block = target.direct_blocks[start_block];
+			if(loops != 0){
+			disk.seekp((block-1)*(block_size), std::ios::beg);
+			}
+			written = 0;
+			
+				
+
+			while((start_byte + written) < (block_size-1) ){
+				disk.put(to_write);
+				written++;
+				num_bytes--;
+				if(num_bytes == 0){break;}
+				written++;
+			}
+			start_block++;
+			loops++;
+			traverse++;
+
+		}
+		if(num_bytes > 0){
+			return 0;
+		}
+		else{
+			control = 1;
+		}	
+		// now we need to read the indirect block to keep going
+		std::ifstream disk_in(disk_file_name, std::ios::in | std::ios::binary);
+		int id_block = target.indirect_block;
+		while(start_block >= 12 && start_block < (12+(block_size/4)) && num_bytes > 0) {
+			
+
+			disk_in.seekg((id_block-1)*(block_size), std::ios::beg);
+
+			std::string line;
+			getline(disk_in, line, '\n');
+
+			int mini_traverse = traverse - 12;
+
+			while (mini_traverse > 0) {
+				line = line.substr(line.find(' ')+1, line.length());
+				mini_traverse -= 1;
+			}
+
+			line = line.substr(0, line.find(' '));
+
+			if (line == "000") {
+				disk_in.close();
+				disk.close();
+				std::cout << "Reached end of file while writing" << std::endl;
+				return 1;
+			}
+
+			int direct = b60_to_decimal(line.c_str());
+
+			disk.seekp((direct-1)*(block_size) + ((start_byte%(block_size-1))), std::ios::beg);
+			
+			if(control == 0){
+				written = 0;
+			
+				
+
+				while((start_byte + written) < (block_size-1) ){
+					disk.put(to_write);
+					num_bytes--;
+					if(num_bytes == 0){break;}
+					written++;
+				}
+				start_block++;
+				loops++;
+				traverse++;
+
+			}
+			else{
+				int i;
+				for(i = 0; i < (block_size-1); i++){
+					disk.put(to_write);
+					num_bytes--;
+					if(num_bytes == 0){break;}
+					written++;
+				}
+				start_block++;
+				loops++;
+				traverse++;
+			}
+
+		}
+		if(num_bytes == 0){disk_in.close();disk.close();return 0;}
+	//	else if(){
+
+//		}
+	}
+	return 1;
+}
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//gotta find the block pointer
