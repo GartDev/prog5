@@ -300,7 +300,7 @@ void deleteFile(std::string fileName){
 	const char * temp = decimal_to_b60(0).c_str();
 	strcpy(zeroed,temp);
 	for(int i = 0;i<(block_size-1);i++){
-		strcat(toWrite,'\0');
+		towrite[i] = '\0';
 	}
 	toWrite[block_size-1]='\n';
 	//empty direct
@@ -415,7 +415,7 @@ void deleteFile(std::string fileName){
 		}
 
 	}
-	free_block_list[inode_map[fileName].location] = 0;
+	free_block_list[inode_map[fileName].location-1] = '0';
 	inode_map.erase(fileName);
 	return;
 }
