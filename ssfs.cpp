@@ -95,6 +95,7 @@ void *read_file(void *arg){
 		}else if(command == "SHUTDOWN"){
 			std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
 			//shutdown();
+			shutdown_globals();
 			pthread_exit(NULL);
 		}else {
 			std::cout << line << ": command not found" << std::endl;
@@ -118,7 +119,6 @@ int main(int argc, char **argv){
 	//read("sample2.txt", 381, 2519);
 
 
-	shutdown_globals();
 
 /*
 	inode * s = new inode("sample.txt", 128);
@@ -619,9 +619,9 @@ int createFile(std::string fileName){
 		int start = (3+(num_blocks/(block_size-1)));
 		//std::cout << "start " << start << std::endl;
 		for(int i = start; i<start+256; i++){
-			if(free_block_list[i-1]=='0'){
+			if(free_block_list[i]=='0'){
 				freeblock = i;
-				free_block_list[i-1] = 1;
+				free_block_list[i] = '1';
 				break;
 			}
 		}
@@ -649,8 +649,9 @@ void import(std::string ssfs_file, std::string unix_file){
 	int unix_bytesize = unix_fstream.tellg();
 	unix_fstream.seekg(0,unix_fstream.beg);
 
+	int start = (3+(num_blocks/(block_size-1)+256));
 	int blocks_left = 0;
-	for(int i = 0; i < free_block_list.size(); i++){
+	for(int i = start; i < free_block_list.size(); i++){
 		if(free_block_list[i] == '0'){
 			blocks_left++;
 		}
