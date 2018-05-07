@@ -117,7 +117,7 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();	
 
-	write("sample3.txt", 'c', 0, 254);
+	write("sample3.txt", 'c', 0, 300);
 
 	shutdown_globals();
 
@@ -494,9 +494,9 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						free_block_list[k] == '1';
 						writ.indirect_block = k+1;
 
-						k++;
+						disk.seekp(std::ios_base::beg + k*(block_size));
 
-						disk.seekp(std::ios_base::beg + (k-1)*(block_size));
+						int save = k;
 
 						int l;
 						for (l = 0 ; l < (block_size/4) ; l++) {
@@ -506,12 +506,21 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 							}
 						}
 
-						for (l = blocks_to_add.size() ; l < std::min(blocks_needed, (block_size/4)) ; l++) {
+						int successes = 0;
+						int z;
+						for (z = blocks_to_add.size() ; z < std::min(blocks_needed, (block_size/4)) ; z++) {
 							int k;
 							for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
 								if (free_block_list[k] == '0') {
 									free_block_list[k] = '1';
 									blocks_to_add.push_back(k+1);
+
+									disk.seekp(std::ios_base::beg + save*block_size + 4*successes);
+
+									std::string k1 = decimal_to_b60(k+1);
+									disk.write(k1.c_str(), 3*sizeof(char));
+
+									successes++;
 									break;
 								}
 							}
