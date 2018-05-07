@@ -295,16 +295,6 @@ void build_free_block_list() {
 
 void deleteFile(std::string fileName){
 	//create empty block to be written over indirect/double indirect
-	char * toWrite = new char[block_size];
-	char * zeroed = new char[4];
-	const char * temp = decimal_to_b60(0).c_str();
-	strcpy(zeroed,temp);
-	for(int i = 0;i<(block_size-1);i++){
-		//toWrite[i] = '\0';
-		toWrite[i] = '\0';
-	}
-	toWrite[block_size-1]='\n';
-	cout << toWrite << endl;
 	//empty direct
 	int directsum = 0;
 	if(inode_map.count(fileName)==0){
@@ -326,8 +316,6 @@ void deleteFile(std::string fileName){
 			//Begin Reading line
 			ifstream diskFile;
 			diskFile.open(disk_file_name);
-			ofstream writeFile;
-			writeFile.open(disk_file_name);
 			//empty double indirect
 			int lineNum = inode_map[fileName].double_indirect_block;
 			int pos = std::ios_base::beg + ((lineNum -1) * block_size); //Position in disk of double_indirect_block
@@ -359,13 +347,10 @@ void deleteFile(std::string fileName){
 				}
 				//free each indirect_block and overwrite them
 				free_block_list[idremoveblock-1] = '0';
-				writeFile.seekp(id_pos);
-				writeFile.write(toWrite, block_size);
 				delete [] idtarget;
 			}
 			free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
-			writeFile.seekp(pos);
-			writeFile.write(toWrite, block_size);
+
 			//finish emptying double indirect block
 			//start emptying indirect_block
 			int indirect_block_num = inode_map[fileName].indirect_block;
@@ -383,18 +368,13 @@ void deleteFile(std::string fileName){
 				free_block_list[dblock-1] = '0';
 			}
 			free_block_list[inode_map[fileName].indirect_block-1] = '0';
-			writeFile.seekp(std::ios_base::beg+indirect_pos);
-			writeFile.write(toWrite, block_size);
 			diskFile.close();
-			writeFile.close();
 			//finish emptying indirect_block
 			delete [] id_line;
 			delete [] target;
 		}else{ //if indirect_block isnt full
 			ifstream diskFile;
 			diskFile.open(disk_file_name);
-			ofstream writeFile;
-			writeFile.open(disk_file_name);
 			int indirect_block_num = inode_map[fileName].indirect_block;
 			int indirect_pos = std::ios_base::beg + ((indirect_pos-1)*block_size);
 			int dblock;
@@ -410,10 +390,7 @@ void deleteFile(std::string fileName){
 				free_block_list[dblock-1] = '0';
 			}
 			free_block_list[inode_map[fileName].indirect_block-1] = '0';
-			writeFile.seekp(std::ios_base::beg+indirect_pos);
-			writeFile.write(toWrite, block_size);
 			diskFile.close();
-			writeFile.close();
 			delete [] id_line;
 		}
 
@@ -423,12 +400,7 @@ void deleteFile(std::string fileName){
 
 	std::ofstream writeFile(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 	int local = (inode_map[fileName].location-1) * (block_size);
-	writeFile.seekp(std::ios::beg+local);
-	writeFile.write(toWrite,block_size*sizeof(char));
-	writeFile.close();
 	inode_map.erase(fileName);
-	delete [] toWrite;
-	delete [] zeroed;
 	return;
 }
 
@@ -561,7 +533,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 				}
 
 				if (offset != -1) {
-					
+
 					int it;
 					for (it = offset ; it < (block_size/4) ; it += 4) {
 						if (blocks_to_add.size() == blocks_needed) {
@@ -632,7 +604,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 								std::string k1 = decimal_to_b60(m+1);
 								disk.write(k1.c_str(), 3*sizeof(char));
-	
+
 								disk.seekp(std::ios_base::beg + m*block_size);
 								int save = m;
 
@@ -1215,27 +1187,27 @@ void shutdown_globals() {
 //	sample.direct_blocks[2] = 900;
 //	sample.double_indirect_block = 444;
 //
-//	inode sample2;
-//	sample2.file_name = "sample2.txt";
-//	sample2.file_size = 1574;
-//	sample2.location = 3+(num_blocks/(block_size-1));
-//	sample2.direct_blocks[0] = 333;
-//	sample2.direct_blocks[1] = 991;
-//	sample2.direct_blocks[2] = 1000;
-//	sample2.direct_blocks[3] = 1004;
-//	sample2.direct_blocks[4] = 500;
-//	sample2.direct_blocks[5] = 501;
-//	sample2.direct_blocks[6] = 599;
-//	sample2.direct_blocks[7] = 903;
-//	sample2.direct_blocks[8] = 999;
-//	sample2.direct_blocks[9] = 1001;
-//	sample2.direct_blocks[10] = 993;
-//	sample2.direct_blocks[11] = 399;
-//	sample2.indirect_block = 902;
-//
+/*
+inode sample2;
+sample2.file_name = "sample2.txt";
+sample2.file_size = 1574;
+sample2.location = 3+(num_blocks/(block_size-1));
+sample2.direct_blocks[0] = 333;
+sample2.direct_blocks[1] = 991;
+sample2.direct_blocks[2] = 1000;
+sample2.direct_blocks[3] = 1004;
+sample2.direct_blocks[4] = 500;
+sample2.direct_blocks[5] = 501;
+sample2.direct_blocks[6] = 599;
+sample2.direct_blocks[7] = 903;
+sample2.direct_blocks[8] = 999;
+sample2.direct_blocks[9] = 1001;
+sample2.direct_blocks[10] = 993;
+sample2.direct_blocks[11] = 399;
+sample2.indirect_block = 902;
 //	inode_map["sample.txt"] = sample;
-//	inode_map["sample2.txt"] = sample2;
-
+inode_map["sample2.txt"] = sample2;
+*/
 	std::map<std::string, inode>::iterator it;
 
 	for (it = inode_map.begin() ; it != inode_map.end() ; it++) {
