@@ -296,9 +296,11 @@ void deleteFile(std::string fileName){
 	const char * temp = decimal_to_b60(0).c_str();
 	strcpy(zeroed,temp);
 	for(int i = 0;i<(block_size-1);i++){
+		//toWrite[i] = '\0';
 		toWrite[i] = '\0';
 	}
 	toWrite[block_size-1]='\n';
+	cout << toWrite << endl;
 	//empty direct
 	int directsum = 0;
 	if(inode_map.count(fileName)==0){
@@ -416,13 +418,12 @@ void deleteFile(std::string fileName){
 	}
 	//cout << "free_block_list[" << inode_map[fileName].location <<"] = " << free_block_list[inode_map[fileName].location];
 	free_block_list[inode_map[fileName].location - 1] = '0';
-	ofstream writeFile;
-	writeFile.open(disk_file_name);
-	int local = (inode_map[fileName].location-1) * block_size;
-	writeFile.seekp(local);
-	writeFile.write(toWrite, block_size);
+
+	std::ofstream writeFile(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
+	int local = (inode_map[fileName].location-1) * (block_size);
+	writeFile.seekp(std::ios::beg+local);
+	writeFile.write(toWrite,block_size*sizeof(char));
 	writeFile.close();
-	//cout << "free_block_list[" << inode_map[fileName].location <<"] = " << free_block_list[inode_map[fileName].location];
 	inode_map.erase(fileName);
 	delete [] toWrite;
 	delete [] zeroed;
