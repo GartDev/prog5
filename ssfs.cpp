@@ -514,7 +514,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 int createFile(std::string fileName){
 	int freeblock = 0;
 	if(inode_map.count(fileName) == 0){
-		int start = ((num_blocks/block_size)-1)+3;
+		int start = (3+(num_blocks/block_size-1));
 		for(int i = start; i<start+256; i++){
 			if(free_block_list[i-1]==0){
 				freeblock = i;
@@ -616,14 +616,14 @@ int add_blocks(std::string fname, int num_blocks){
 			//	the right number is what i was figuring out when my computer
 			//	broke.
 			//	seekp(pos + (int)found);
-			//	ofs.write((itoa(block))), 
+			//	ofs.write((itoa(block))),
 				odiskFile.close();
-				 
+
 			//
 			}
 			num_blocks--;
-					
-			
+
+
 		}
 	}
 	if(num_blocks == 0){
