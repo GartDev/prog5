@@ -83,7 +83,7 @@ void *read_file(void *arg){
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
 			std::cout << "Writing character '" << c << "' into "<< ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			//write(ssfs_file,character,start_byte,num_bytes);
+			write(ssfs_file,c,start_byte,num_bytes);
 		}else if(command == "READ"){
 			line_stream >> ssfs_file;
 			int start_byte, num_bytes;
@@ -437,7 +437,6 @@ void deleteFile(std::string fileName){
 
 void list(){
 	//for each element in inodemap, display the inode->name and inode->size
-	cout <<"HELP" <<endl;
 	map<string,inode>::iterator it;
 	for(it = inode_map.begin(); it != inode_map.end(); it++){
 		std::cout << it->second.file_name << " size: " << it->second.file_size << " bytes" << std::endl;
@@ -962,11 +961,11 @@ void import(std::string ssfs_file, std::string unix_file){
 	}
 
 	char ch;
-	int curr_byte = 1;
+	int curr_byte = 0;
 	//std::cout << "begin import" << std::endl;
 	while(unix_fstream >> noskipws >> ch){
 		//std::cout << ch;
-		//write(ssfs_file,ch,curr_byte,1);
+		write(ssfs_file,ch,curr_byte,1);
 		curr_byte++;
 	}
 	//std::cout << std::endl;
