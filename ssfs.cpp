@@ -412,6 +412,7 @@ void deleteFile(std::string fileName){
 
 	}
 	free_block_list[inode_map[fileName].location] = 0;
+	inode_map.erase(fileName);
 	return;
 }
 
@@ -619,9 +620,9 @@ int createFile(std::string fileName){
 		int start = (3+(num_blocks/(block_size-1)));
 		//std::cout << "start " << start << std::endl;
 		for(int i = start; i<start+256; i++){
-			if(free_block_list[i-1]=='0'){
+			if(free_block_list[i]=='0'){
 				freeblock = i;
-				free_block_list[i-1] = 1;
+				free_block_list[i] = '1';
 				break;
 			}
 		}
