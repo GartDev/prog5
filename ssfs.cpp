@@ -416,6 +416,12 @@ void deleteFile(std::string fileName){
 	}
 	//cout << "free_block_list[" << inode_map[fileName].location <<"] = " << free_block_list[inode_map[fileName].location];
 	free_block_list[inode_map[fileName].location - 1] = '0';
+	ofstream writeFile;
+	writeFile.open(disk_file_name);
+	int local = (inode_map[fileName].location-1) * block_size;
+	writeFile.seekp(local);
+	writeFile.write(toWrite, block_size);
+	writeFile.close();
 	//cout << "free_block_list[" << inode_map[fileName].location <<"] = " << free_block_list[inode_map[fileName].location];
 	inode_map.erase(fileName);
 	delete [] toWrite;
