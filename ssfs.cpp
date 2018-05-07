@@ -350,15 +350,15 @@ void deleteFile(std::string fileName){
 					q = strtok(NULL," ");
 					dblock = b60_to_decimal(q);
 					//free direct block
-					free_block_list[dblock] = 0;
+					free_block_list[dblock] = '0';
 				}
 				//free each indirect_block and overwrite them
-				free_block_list[idremoveblock-1] = 0;
+				free_block_list[idremoveblock-1] = '0';
 				writeFile.seekp(id_pos);
 				writeFile.write(toWrite, block_size);
 				delete [] idtarget;
 			}
-			free_block_list[inode_map[fileName].double_indirect_block-1] = 0;
+			free_block_list[inode_map[fileName].double_indirect_block-1] = '0';
 			writeFile.seekp(pos);
 			writeFile.write(toWrite, block_size);
 			//finish emptying double indirect block
@@ -376,10 +376,10 @@ void deleteFile(std::string fileName){
 
 				blocknum = strtok(NULL," ");
 				dblock = b60_to_decimal(blocknum);
-				free_block_list[dblock-1] = 0;
+				free_block_list[dblock-1] = '0';
 			}
-			free_block_list[inode_map[fileName].indirect_block-1] = 0;
-			writeFile.seekp(indirect_pos);
+			free_block_list[inode_map[fileName].indirect_block-1] = '0';
+			writeFile.seekp(std::ios_base::beg+indirect_pos);
 			writeFile.write(toWrite, block_size);
 			diskFile.close();
 			writeFile.close();
@@ -394,7 +394,7 @@ void deleteFile(std::string fileName){
 			int indirect_block_num = inode_map[fileName].indirect_block;
 			int indirect_pos = std::ios_base::beg + ((indirect_pos-1)*block_size);
 			int dblock;
-			diskFile.seekg(indirect_pos);
+			diskFile.seekg(std::ios_base::beg+indirect_pos);
 			std::string indirect_line;
 			getline(diskFile,indirect_line,'\n');
 			char * id_line = new char[indirect_line.length()+1];
@@ -403,10 +403,10 @@ void deleteFile(std::string fileName){
 			while(blocknum!=NULL){
 				blocknum = strtok(NULL," ");
 				dblock = b60_to_decimal(blocknum);
-				free_block_list[dblock-1] = 0;
+				free_block_list[dblock-1] = '0';
 			}
-			free_block_list[inode_map[fileName].indirect_block-1] = 0;
-			writeFile.seekp(indirect_pos);
+			free_block_list[inode_map[fileName].indirect_block-1] = '0';
+			writeFile.seekp(std::ios_base::beg+indirect_pos);
 			writeFile.write(toWrite, block_size);
 			diskFile.close();
 			writeFile.close();
@@ -419,7 +419,7 @@ void deleteFile(std::string fileName){
 	ofstream writeFile;
 	writeFile.open(disk_file_name);
 	int local = (inode_map[fileName].location-1) * block_size;
-	writeFile.seekp(local);
+	writeFile.seekp(std::ios_base::beg+local);
 	writeFile.write(toWrite, block_size);
 	writeFile.close();
 	//cout << "free_block_list[" << inode_map[fileName].location <<"] = " << free_block_list[inode_map[fileName].location];
