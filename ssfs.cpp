@@ -32,7 +32,7 @@ std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 int createFile(std::string fileName);
 void deleteFile(std::string fileName);
-//bool write(std::string fname, char to_write, int start_byte, int num_bytes);
+bool write(std::string fname, char to_write, int start_byte, int num_bytes);
 void read(std::string fname, int start_byte, int num_bytes);
 void ssfsCat(std::string fileName);
 void list();
@@ -115,7 +115,7 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
-	read("sample2.txt", 381, 2519);
+	read("sample2.txt", 9000, 60);
 
 
 	shutdown_globals();
@@ -423,28 +423,15 @@ void list(){
 	}
 }
 
-/*bool write(std::string fname, char to_write, int start_byte, int num_bytes){
-//	inode inode = inode_map[fname];
+bool write(std::string fname, char to_write, int start_byte, int num_bytes){
+	inode writeme = inode_map[fname];
+
+
+	
 }
 
-	//check file size, return error if start_byte is out of bounds
-//	int current_size = inode.file_size;
-//	if(current_size < start_byte){
-		return false;
-//	}
-	//check if file needs to be extended
-//	if(current_size	< (start_byte + num_bytes)){
-		if(sizeof(free_block_list) == 0){
-			return false;
-		}
-		else{
-		//expand the file
-		}
-//	}
-}*/
-
 void read(std::string fname, int start_byte, int num_bytes){
-	//gotta find the block pointer
+	//georege aint got no sauce
 
 	inode readme = inode_map[fname];
 	int current_size = readme.file_size;
@@ -466,6 +453,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 		int traverse = start_byte / (block_size-1);
 
 		int macro_traverse = 0;
+		int check = 0;
 
 		while (traverse < 12 and num_bytes > 0) {
 
@@ -476,13 +464,11 @@ void read(std::string fname, int start_byte, int num_bytes){
 			std::string line;
 			getline(disk, line, '\n');
 
-			line = line.substr(0, std::min(num_bytes, block_size-(start_byte%(block_size-1))));
+			int len = line.length();
 
-			if (start_byte < num_bytes) {
-				num_bytes -= (block_size-start_byte-1);
-			} else {
-				num_bytes -= (block_size - ((1 + start_byte)%(block_size-1)));
-			}
+			line = line.substr(0, std::min(num_bytes, std::min(len, block_size-1)));
+
+			num_bytes -= std::min(num_bytes, std::min(len, block_size-1));
 
 			last += line;
 			traverse += 1;
@@ -494,8 +480,6 @@ void read(std::string fname, int start_byte, int num_bytes){
 			int id_block = readme.indirect_block;
 
 			disk.seekg((id_block-1)*(block_size), std::ios::beg);
-
-			std::cout << num_bytes << " " << start_byte << std::endl;
 
 			std::string line;
 			getline(disk, line, '\n');
@@ -509,33 +493,26 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 			line = line.substr(0, line.find(' '));
 
-			if (line == "000") {
-				break;
-			}
-
 			int direct = b60_to_decimal(line.c_str());
 
 			disk.seekg((direct-1)*(block_size) + ((start_byte%(block_size-1))), std::ios::beg);
 			getline(disk, line, '\n');
 
-			std::cout << line << std::endl;
+			int len = line.length();
 
-			line = line.substr(0, std::min(num_bytes, std::abs(block_size-start_byte)));
+			line = line.substr(0, std::min(num_bytes, std::min(len, block_size-1)));
 
-			if (num_bytes <= block_size-1) {
-				last += line;
-				break;	
-			} else if (start_byte <= num_bytes) {
-				num_bytes -= (block_size-start_byte-1);
-			} else {
-				num_bytes -= (block_size-((1+start_byte)%(block_size-1)));
-			}
+			num_bytes -= std::min(num_bytes, std::min(len, block_size-1));
 
 			last += line;
 			start_byte = 0;
 			traverse += 1;	
 
-		} while (traverse >= (12+(block_size/4)) and num_bytes > 0) {
+		} 
+
+		macro_traverse = traverse - (12 + (block_size/4));
+
+		while (traverse >= (12+(block_size/4)) and traverse < (12 + (block_size/4) + (block_size/4)*(block_size/4)) and num_bytes > 0) {
 			int did_block = readme.double_indirect_block;
 
 			disk.seekg((did_block-1)*(block_size), std::ios::beg);
@@ -543,68 +520,45 @@ void read(std::string fname, int start_byte, int num_bytes){
 			std::string line;
 			getline(disk, line, '\n');
 
-			int mini_traverse2 = traverse - (12+(block_size/4));
+			int id_block_index = (macro_traverse / (block_size/4));
 
-			if (mini_traverse2 % ((block_size/4)+1) == block_size/4) {
-				macro_traverse += 1;
-				mini_traverse2 = 0;
-	
-			} else {
-				std::string get_block;
-				getline(disk, get_block, '\n');
-
-				int count = 0;
-				while (mini_traverse2 > 0) {
-					get_block = get_block.substr(get_block.find(' ')+1, get_block.length());
-					mini_traverse2 -= 1;
-					count += 1;
-				}
-
-				get_block = get_block.substr(0, get_block.find(' '));
-
-				if (get_block == "000") {
-					break;
-				}
-
-				int id_block = b60_to_decimal(get_block.c_str());
-
-				disk.seekg((id_block-1)*(block_size), std::ios::beg);
-
-				std::string line;
-				getline(disk, line, '\n');
-
-				int mini_traverse = traverse - 12;
-
-				while (mini_traverse > 0) {
-					line = line.substr(line.find(' ')+1, line.length());
-					mini_traverse -= 1;
-				}
-
-				line = line.substr(0, line.find(' '));
-
-				if (line == "000") {
-					break;
-				}
-
-				int direct = b60_to_decimal(line.c_str());
-
-				disk.seekg((direct-1)*(block_size) + ((start_byte%(block_size-1))), std::ios::beg);
-				getline(disk, line, '\n');
-
-				line = line.substr(0, std::min(num_bytes, std::abs(block_size-start_byte)));
-
-				if (start_byte <= num_bytes) {
-					num_bytes -= (block_size-start_byte-1);
-				} else {
-					num_bytes -= (block_size-((1+start_byte)%(block_size-1)));
-				}
-
-				last += line;
-				start_byte = 0;
-				traverse += 1;
-				mini_traverse2 = count+1;	
-
+			while (id_block_index > 0) {
+				line = line.substr(line.find(' ')+1, line.length());
+				id_block_index--;
 			}
+
+			line = line.substr(0, line.find(' '));
+
+			int id_block = b60_to_decimal(line.c_str());
+
+			disk.seekg((id_block-1)*(block_size), std::ios::beg);
+
+			getline(disk, line, '\n');
+
+			int direct_block_index = macro_traverse % (block_size/4);
+
+			while (direct_block_index > 0) {
+				line = line.substr(line.find(' ')+1, line.length());
+				direct_block_index--;
+			}
+
+			int direct_block = b60_to_decimal(line.substr(0, line.find(' ')).c_str());
+
+			disk.seekg((direct_block-1)*(block_size) + ((start_byte%(block_size-1))), std::ios::beg);
+			//disk.seekg((direct_block-1)*(block_size) + std::max(start_byte - 12*(block_size-1) - (block_size/4)*(block_size-1) + 1, 0), std::ios::beg);
+
+			getline(disk, line, '\n');
+
+			int len = line.length();
+
+			line = line.substr(0, std::min(num_bytes, std::min(len, block_size-1)));
+
+			num_bytes -= std::min(num_bytes, std::min(len, block_size-1));
+
+			last += line;
+			start_byte = 0;
+			traverse += 1;
+			macro_traverse += 1;
 
 		} 
 
