@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sstream>
 #include <pthread.h>
+#include <math.h>
 #include <map>
 #include <vector>
 
@@ -114,7 +115,11 @@ int main(int argc, char **argv){
 	disk_file_name = std::string(argv[1]);
 	get_system_parameters();
 	build_free_block_list();
-	build_inode_map();
+	build_inode_map();	
+
+	write("sample3.txt", 'c', 0, 254);
+
+	shutdown_globals();
 
 /*
 	inode * s = new inode("sample.txt", 128);
@@ -432,6 +437,192 @@ void list(){
 	}
 }
 
+int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
+	inode writ = inode_map[file_name];
+
+	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
+
+	if (start_byte > writ.file_size) {
+		std::cout << "Start byte is out of range for write on " << file_name << std::endl;
+		return 0;
+	}
+
+	if (writ.file_size < (start_byte + num_bytes)) {
+		int bytes_needed = (start_byte + num_bytes) - writ.file_size;
+		int blocks_needed = ceil((float) bytes_needed / (block_size-1));
+
+		std::vector<int> blocks_to_add;
+
+		int j;
+		for (j = 0 ; j < 12 ; j++) {
+			if (blocks_to_add.size() == blocks_needed) {
+				break;
+			}
+
+			if (writ.direct_blocks[j] == 0) {
+				int k;
+				for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
+					if (free_block_list[k] == '0') {
+						free_block_list[k] = '1';
+						blocks_to_add.push_back(k+1);
+						break;
+					}
+				}
+			}
+		}
+
+		if (blocks_to_add.size() == blocks_needed) {
+			// we're good
+		} else {
+
+			int id_block = writ.indirect_block;
+
+			if (id_block == 0) {
+				int k;
+				for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
+					if (blocks_to_add.size() == block_size or writ.indirect_block != 0) {
+						break;
+					}
+
+					if (free_block_list[k] == '0') {
+						free_block_list[k] == '1';
+						writ.indirect_block = k+1;
+
+						k++;
+
+						disk.seekp(std::ios_base::beg + (k-1)*(block_size));
+
+						int l;
+						for (l = 0 ; l < (block_size/4) ; l++) {
+							disk.write("000", 3*sizeof(char));
+							if (l+1 != (block_size/4)) {
+								disk.write(" ", sizeof(char));
+							}
+						}
+
+						for (l = blocks_to_add.size() ; l < std::min(blocks_needed, (block_size/4)) ; l++) {
+							int k;
+							for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
+								if (free_block_list[k] == '0') {
+									free_block_list[k] = '1';
+									blocks_to_add.push_back(k+1);
+									break;
+								}
+							}
+
+						}
+
+					}
+				}
+			}
+		}
+
+		if (blocks_to_add.size() == blocks_needed) {
+			// we're good
+		} else {
+			int did_block = writ.double_indirect_block;
+
+			if (did_block == 0) {
+				int k;
+				for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
+					if (blocks_to_add.size() == blocks_needed or writ.double_indirect_block != 0) {
+						break;
+					}
+
+					if (free_block_list[k] == '0') {
+						free_block_list[k] = '1';	
+						writ.double_indirect_block = k+1;
+
+						disk.seekp(std::ios_base::beg + (k)*(block_size));
+
+						int l;
+						for (l = 0 ; l < (block_size/4) ; l++) {
+							disk.write("000", 3*sizeof(char));
+							if (l+1 != (block_size/4)) {
+								disk.write(" ", sizeof(char));
+							}
+						}
+
+						int m;
+						for (m = (2+(num_blocks/(block_size-1)+256)) ; m < num_blocks ; m++) {
+
+							if (blocks_to_add.size() == blocks_needed) {
+								break;
+							}
+
+							if (free_block_list[m] == '0') {
+								free_block_list[m] = '1';
+							
+								disk.seekp(std::ios_base::beg + m*block_size);
+
+								int l;	
+								for (l = 0 ; l < (block_size/4) ; l++) {
+									disk.write("000", 3*sizeof(char));
+									if (l+1 != (block_size/4)) {
+										disk.write(" ", sizeof(char));
+									}
+								}
+
+								for (l = blocks_to_add.size() ; l < std::min(blocks_needed, (block_size/4)) ; l++) {
+									int n;
+									for (n = (2+(num_blocks/(block_size-1)+256)) ; n < num_blocks ; n++) {
+										if (free_block_list[n] == '0') {
+											free_block_list[n] = '1';
+											blocks_to_add.push_back(n+1);
+											break;
+										}
+									}
+
+								}
+
+
+							}
+						}
+						int o;
+						for (o = blocks_to_add.size() ; o < std::min(blocks_needed, (block_size/4)) ; o++) {
+							int k;
+							for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
+								if (free_block_list[k] == '0') {
+									free_block_list[k] = '1';
+									blocks_to_add.push_back(k+1);
+									break;
+								}
+							}
+
+						}
+
+					}
+				}
+
+			}
+
+		}	
+		if (blocks_to_add.size() != blocks_needed) {
+			std::cout << "There aren't enough blocks left to hold a file that big" << std::endl;
+
+			int i;
+			for (i = 0 ; i < blocks_to_add.size() ; i++) {
+				free_block_list[blocks_to_add[i]+1] = '0';
+			}
+
+			return 0;
+		} else {
+			int i;
+			for (i = 0 ; i < blocks_to_add.size() ; i++) {
+				std::cout << blocks_to_add[i] << std::endl;
+			//	free_block_list[blocks_to_add[i]+1] = '0';
+			}
+		}
+
+
+	}
+
+	return 0;
+
+}
+
+
+/*
 int write(std::string fname, char to_write, int start_byte, int num_bytes){
 	inode target = inode_map[fname];
 	int control = 0;
@@ -559,6 +750,7 @@ int write(std::string fname, char to_write, int start_byte, int num_bytes){
 	}
 	return 1;
 }
+*/
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//georege aint got no sauce
@@ -567,7 +759,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 	int current_size = readme.file_size;
 
 	if(current_size < start_byte){
-		std::cout << "Start byte is out of range" << std::endl;
+		std::cout << "Start byte is out of range for read on " << readme.file_name << std::endl;
 
 	} else {
 		std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
