@@ -73,7 +73,7 @@ void *read_file(void *arg){
 		}else if(command == "DELETE"){
 			line_stream >> ssfs_file;
 			std::cout << "Deleting " << ssfs_file << std::endl;
-			//deleteFile(ssfs_file);
+			deleteFile(ssfs_file);
 		}else if(command == "WRITE"){
 			line_stream >> ssfs_file;
 			char c;
@@ -201,7 +201,7 @@ void build_inode_map() {
 
 	//seekg beginning + num_blocks + block_size many characters
 //	std::cout << "what: " << (block_size)*(3+(num_blocks/(block_size-1))) << std::endl;
-	disk.seekg(block_size*(3+(num_blocks/(block_size-1)) - 1), std::ios::beg);
+	disk.seekg(block_size*(2+(num_blocks/(block_size-1))), std::ios::beg);
     int length = disk.tellg();
 
 //	std::cout << "disk length " << length << std::endl;
@@ -300,7 +300,7 @@ void deleteFile(std::string fileName){
 	const char * temp = decimal_to_b60(0).c_str();
 	strcpy(zeroed,temp);
 	for(int i = 0;i<(block_size-1);i++){
-		strcat(toWrite,'\0');
+		toWrite[i] = '\0';
 	}
 	toWrite[block_size-1]='\n';
 	//empty direct
@@ -360,6 +360,7 @@ void deleteFile(std::string fileName){
 				free_block_list[idremoveblock-1] = 0;
 				writeFile.seekp(id_pos);
 				writeFile.write(toWrite, block_size);
+				delete [] idtarget;
 			}
 			free_block_list[inode_map[fileName].double_indirect_block-1] = 0;
 			writeFile.seekp(pos);
@@ -387,7 +388,8 @@ void deleteFile(std::string fileName){
 			diskFile.close();
 			writeFile.close();
 			//finish emptying indirect_block
-
+			delete [] id_line;
+			delete [] target;
 		}else{ //if indirect_block isnt full
 			ifstream diskFile;
 			diskFile.open(disk_file_name);
@@ -412,16 +414,22 @@ void deleteFile(std::string fileName){
 			writeFile.write(toWrite, block_size);
 			diskFile.close();
 			writeFile.close();
+			delete [] id_line;
 		}
 
 	}
-	free_block_list[inode_map[fileName].location] = 0;
+	//cout << "free_block_list[" << inode_map[fileName].location <<"] = " << free_block_list[inode_map[fileName].location];
+	free_block_list[inode_map[fileName].location - 1] = '0';
+	//cout << "free_block_list[" << inode_map[fileName].location <<"] = " << free_block_list[inode_map[fileName].location];
 	inode_map.erase(fileName);
+	delete [] toWrite;
+	delete [] zeroed;
 	return;
 }
 
 void list(){
 	//for each element in inodemap, display the inode->name and inode->size
+	cout <<"HELP" <<endl;
 	map<string,inode>::iterator it;
 	for(it = inode_map.begin(); it != inode_map.end(); it++){
 		std::cout << it->second.file_name << " size: " << it->second.file_size << " bytes" << std::endl;
@@ -729,11 +737,12 @@ void read(std::string fname, int start_byte, int num_bytes){
 int createFile(std::string fileName){
 	int freeblock = 0;
 	if(inode_map.count(fileName) == 0){
-		int start = (3+(num_blocks/(block_size-1)));
+		int start = (2+(num_blocks/(block_size-1)));
 		//std::cout << "start " << start << std::endl;
 		for(int i = start; i<start+256; i++){
 			if(free_block_list[i]=='0'){
-				freeblock = i;
+				//cout <<" i = " << i << endl;
+				freeblock = i+1;
 				free_block_list[i] = '1';
 				break;
 			}
@@ -742,6 +751,7 @@ int createFile(std::string fileName){
 		inode this_node;
 		this_node.file_name = fileName;
 		this_node.file_size = 0;
+		//cout <<" freeblock = " << freeblock << endl;
 		this_node.location = freeblock;
 		inode_map[fileName] = this_node;
 		}else{
@@ -762,7 +772,7 @@ void import(std::string ssfs_file, std::string unix_file){
 	int unix_bytesize = unix_fstream.tellg();
 	unix_fstream.seekg(0,unix_fstream.beg);
 
-	int start = (3+(num_blocks/(block_size-1)+256));
+	int start = (2+(num_blocks/(block_size-1)+256));
 	int blocks_left = 0;
 	for(int i = start; i < free_block_list.size(); i++){
 		if(free_block_list[i] == '0'){
@@ -1172,6 +1182,7 @@ int atCapacity(int lineNum,int flag){
 			}
 			diskFile.close();
 			atCapacity(lineNum,lastidblock);
+			delete [] target;
 		}
 	}
 }
