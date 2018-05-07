@@ -90,12 +90,11 @@ void *read_file(void *arg){
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
 			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			//read(ssfs_file,start_byte,num_bytes);
+			read(ssfs_file,start_byte,num_bytes);
 		}else if(command == "LIST"){
 			list();
 		}else if(command == "SHUTDOWN"){
 			std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
-			//shutdown();
 			shutdown_globals();
 			pthread_exit(NULL);
 		}else {
@@ -309,7 +308,7 @@ void deleteFile(std::string fileName){
 	//empty direct
 	int directsum = 0;
 	if(inode_map.count(fileName)==0){
-		std::cout << fileName << ": does not exist" << std::endl;
+		std::cout << "cannot remove '"<< fileName << "': No such file" << std::endl;
 		return;
 	}
 	if(!inode_map[fileName].direct_blocks.empty()){
@@ -435,6 +434,9 @@ void deleteFile(std::string fileName){
 
 void list(){
 	//for each element in inodemap, display the inode->name and inode->size
+	if(inode_map.empty()){
+		return;
+	}
 	map<string,inode>::iterator it;
 	for(it = inode_map.begin(); it != inode_map.end(); it++){
 		std::cout << it->second.file_name << " size: " << it->second.file_size << " bytes" << std::endl;
@@ -442,6 +444,13 @@ void list(){
 }
 
 int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
+
+	if(inode_map.count(file_name) == 0){
+		//std::cout << file_name << ": No such file" << std::endl;
+		createFile(file_name);
+		return 0;
+	}
+
 	inode writ = inode_map[file_name];
 
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
