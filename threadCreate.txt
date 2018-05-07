@@ -1,0 +1,3 @@
+CREATE file1
+CREATE file2
+SHUTDOWN
