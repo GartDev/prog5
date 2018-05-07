@@ -38,6 +38,7 @@ void ssfsCat(std::string fileName);
 void list();
 int atCapacity(int lineNum,int flag);
 void shutdown_globals();
+void import(std::string ssfs_file, std::string unix_file);
 
 void *read_file(void *arg){
 	std::ifstream opfile;
@@ -58,13 +59,13 @@ void *read_file(void *arg){
 		if(command == "CREATE"){
 			line_stream >> ssfs_file;
 			std::cout << "Creating " << ssfs_file << std::endl;
-			//create(ssfs_file);
+			createFile(ssfs_file);
 		}else if(command == "IMPORT"){
 			line_stream >> ssfs_file;
 			std::string unix_file;
 			line_stream >> unix_file;
 			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
-			//import(ssfs_file,unix_file);
+			import(ssfs_file,unix_file);
 		}else if(command == "CAT"){
 			line_stream >> ssfs_file;
 			std::cout << "Contents of " << ssfs_file << std::endl;
@@ -114,7 +115,8 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
-	//read("sample2.txt", 1, 1057);
+	read("sample2.txt", 381, 2519);
+
 
 	shutdown_globals();
 
@@ -456,37 +458,44 @@ void read(std::string fname, int start_byte, int num_bytes){
 		std::string last = "";
 
 		if((start_byte + num_bytes-1) > current_size){
-			std::cout << current_size << " " << start_byte << " " << num_bytes << std::endl;
-			num_bytes = current_size - start_byte;
+			num_bytes = current_size - start_byte + 1;
 		}
 
 		start_byte -= 1;
 
-		int traverse = start_byte / block_size;
+		int traverse = start_byte / (block_size-1);
+
+		int macro_traverse = 0;
 
 		while (traverse < 12 and num_bytes > 0) {
 
 			int block = readme.direct_blocks[traverse];
 
-			disk.seekg((block-1)*(block_size) + (start_byte%block_size), std::ios::beg);
+			disk.seekg((block-1)*(block_size) + (start_byte%(block_size-1)), std::ios::beg);
 
 			std::string line;
 			getline(disk, line, '\n');
 
-			std::cout << num_bytes << " " << block_size-start_byte << std::endl;
+			line = line.substr(0, std::min(num_bytes, block_size-(start_byte%(block_size-1))));
 
-			line = line.substr(0, std::min(num_bytes, (block_size-start_byte)));
-			num_bytes -= (block_size-start_byte-1);
+			if (start_byte < num_bytes) {
+				num_bytes -= (block_size-start_byte-1);
+			} else {
+				num_bytes -= (block_size - ((1 + start_byte)%(block_size-1)));
+			}
 
 			last += line;
 			traverse += 1;
 			start_byte = 0;
 
-		} while (traverse >= 12 and traverse < (12+(block_size/4)) and num_bytes > 0) {
+		} 
 
+		while (traverse >= 12 and traverse < (12+(block_size/4)) and num_bytes > 0) {
 			int id_block = readme.indirect_block;
 
-			disk.seekg((id_block-1)*(block_size) + (start_byte%block_size), std::ios::beg);
+			disk.seekg((id_block-1)*(block_size), std::ios::beg);
+
+			std::cout << num_bytes << " " << start_byte << std::endl;
 
 			std::string line;
 			getline(disk, line, '\n');
@@ -500,11 +509,104 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 			line = line.substr(0, line.find(' '));
 
+			if (line == "000") {
+				break;
+			}
+
+			int direct = b60_to_decimal(line.c_str());
+
+			disk.seekg((direct-1)*(block_size) + ((start_byte%(block_size-1))), std::ios::beg);
+			getline(disk, line, '\n');
+
 			std::cout << line << std::endl;
 
+			line = line.substr(0, std::min(num_bytes, std::abs(block_size-start_byte)));
+
+			if (num_bytes <= block_size-1) {
+				last += line;
+				break;	
+			} else if (start_byte <= num_bytes) {
+				num_bytes -= (block_size-start_byte-1);
+			} else {
+				num_bytes -= (block_size-((1+start_byte)%(block_size-1)));
+			}
+
+			last += line;
+			start_byte = 0;
+			traverse += 1;	
+
 		} while (traverse >= (12+(block_size/4)) and num_bytes > 0) {
-			// check the double indirect blocks
-		}
+			int did_block = readme.double_indirect_block;
+
+			disk.seekg((did_block-1)*(block_size), std::ios::beg);
+
+			std::string line;
+			getline(disk, line, '\n');
+
+			int mini_traverse2 = traverse - (12+(block_size/4));
+
+			if (mini_traverse2 % ((block_size/4)+1) == block_size/4) {
+				macro_traverse += 1;
+				mini_traverse2 = 0;
+	
+			} else {
+				std::string get_block;
+				getline(disk, get_block, '\n');
+
+				int count = 0;
+				while (mini_traverse2 > 0) {
+					get_block = get_block.substr(get_block.find(' ')+1, get_block.length());
+					mini_traverse2 -= 1;
+					count += 1;
+				}
+
+				get_block = get_block.substr(0, get_block.find(' '));
+
+				if (get_block == "000") {
+					break;
+				}
+
+				int id_block = b60_to_decimal(get_block.c_str());
+
+				disk.seekg((id_block-1)*(block_size), std::ios::beg);
+
+				std::string line;
+				getline(disk, line, '\n');
+
+				int mini_traverse = traverse - 12;
+
+				while (mini_traverse > 0) {
+					line = line.substr(line.find(' ')+1, line.length());
+					mini_traverse -= 1;
+				}
+
+				line = line.substr(0, line.find(' '));
+
+				if (line == "000") {
+					break;
+				}
+
+				int direct = b60_to_decimal(line.c_str());
+
+				disk.seekg((direct-1)*(block_size) + ((start_byte%(block_size-1))), std::ios::beg);
+				getline(disk, line, '\n');
+
+				line = line.substr(0, std::min(num_bytes, std::abs(block_size-start_byte)));
+
+				if (start_byte <= num_bytes) {
+					num_bytes -= (block_size-start_byte-1);
+				} else {
+					num_bytes -= (block_size-((1+start_byte)%(block_size-1)));
+				}
+
+				last += line;
+				start_byte = 0;
+				traverse += 1;
+				mini_traverse2 = count+1;	
+
+			}
+
+		} 
 
 		std::cout << last << std::endl;
 
@@ -532,6 +634,44 @@ int createFile(std::string fileName){
 	}else{
 		std::cout << fileName << ": already exists" << std::endl;
 	}
+
+}
+
+/*STILL NEED TO ACCOUNT FOR IF THE UNIX FILE IS TOO LARGE*/
+void import(std::string ssfs_file, std::string unix_file){
+	std::ifstream unix_fstream (unix_file, std::ifstream::binary);
+	if(!unix_fstream) perror(unix_file.c_str());
+	
+	unix_fstream.seekg(0,unix_fstream.end);
+	int unix_bytesize = unix_fstream.tellg();
+	unix_fstream.seekg(0,unix_fstream.beg);
+
+	int blocks_left = 0;
+	for(int i = 0; i < free_block_list.size(); i++){
+		if(free_block_list[i] == '0'){
+			blocks_left++;
+		}
+	}
+
+	if(unix_bytesize > (blocks_left*block_size)){
+		std::cerr << unix_file << ": File is too large" << std::endl;
+		return;
+	}
+
+	if(inode_map.count(ssfs_file) == 0){
+	//if the file doesn't exist, create it
+		createFile(ssfs_file);
+	}
+
+	char ch;
+	int curr_byte = 1;
+	//std::cout << "begin import" << std::endl;
+	while(unix_fstream >> noskipws >> ch){
+		//std::cout << ch;
+		//write(ssfs_file,ch,curr_byte,1);
+		curr_byte++;
+	}
+	//std::cout << std::endl;
 
 }
 
