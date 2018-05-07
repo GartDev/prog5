@@ -117,7 +117,7 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();	
 
-	write("sample3.txt", 'c', 0, 254);
+	//write("sample3.txt", 'c', 0, 254);
 
 	shutdown_globals();
 
