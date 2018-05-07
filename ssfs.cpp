@@ -305,6 +305,10 @@ void deleteFile(std::string fileName){
 	toWrite[block_size-1]='\n';
 	//empty direct
 	int directsum = 0;
+	if(inode_map.count(fileName)==0){
+		std::cout << fileName << ": does not exist" << std::endl;
+		return;
+	}
 	if(!inode_map[fileName].direct_blocks.empty()){
 		for(int i = 0; i<inode_map[fileName].direct_blocks.size(); i++){
 			if(inode_map[fileName].direct_blocks[i]!=0){
@@ -454,16 +458,16 @@ int write(std::string fname, char to_write, int start_byte, int num_bytes){
 		disk.seekp((block-1)*(block_size) + (start_byte%(block_size-1)), std::ios::beg);
 		int written;
 		int loops = 0;
-		
+
 		while(start_block < 12 && num_bytes > 0) {
-			
+
 			block = target.direct_blocks[start_block];
 			if(loops != 0){
 			disk.seekp((block-1)*(block_size), std::ios::beg);
 			}
 			written = 0;
-			
-				
+
+
 
 			while((start_byte + written) < (block_size-1) ){
 				disk.put(to_write);
@@ -482,12 +486,12 @@ int write(std::string fname, char to_write, int start_byte, int num_bytes){
 		}
 		else{
 			control = 1;
-		}	
+		}
 		// now we need to read the indirect block to keep going
 		std::ifstream disk_in(disk_file_name, std::ios::in | std::ios::binary);
 		int id_block = target.indirect_block;
 		while(start_block >= 12 && start_block < (12+(block_size/4)) && num_bytes > 0) {
-			
+
 
 			disk_in.seekg((id_block-1)*(block_size), std::ios::beg);
 
@@ -513,11 +517,11 @@ int write(std::string fname, char to_write, int start_byte, int num_bytes){
 			int direct = b60_to_decimal(line.c_str());
 
 			disk.seekp((direct-1)*(block_size) + ((start_byte%(block_size-1))), std::ios::beg);
-			
+
 			if(control == 0){
 				written = 0;
-			
-				
+
+
 
 				while((start_byte + written) < (block_size-1) ){
 					disk.put(to_write);
