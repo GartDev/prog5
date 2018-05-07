@@ -331,33 +331,32 @@ void deleteFile(std::string fileName){
 			writeFile.open(disk_file_name);
 			//empty double indirect
 			int lineNum = inode_map[fileName].double_indirect_block;
-			int pos = std::ios_base::beg + ((lineNum -1) * block_size);
+			int pos = std::ios_base::beg + ((lineNum -1) * block_size); //Position in disk of double_indirect_block
 			diskFile.seekg(pos);
 			std::string dibLine; //dibLine is string containing block
 			getline(diskFile,dibLine,'\n');
 			//Finish Reading line into string
 			int idremoveblock;
 			char * target = new char [dibLine.length()+1];
-  			strcpy (target, dibLine.c_str());
+  			strcpy (target, dibLine.c_str()); //copy line of doubleindirect into target
 			const char * p = strtok(target," ");
 			while(p!=NULL){ //for each number in double indirect
-				p = strtok(NULL," ");
-				idremoveblock = b60_to_decimal(p);
+				p = strtok(NULL," "); //p = value
+				idremoveblock = b60_to_decimal(p); //convert indirect block# inside double indirect to decimal put in idremoveblock
 				int id_linenum = idremoveblock; //Number of each indirect_block in double
-				int id_pos = std::ios_base::beg + ((id_linenum-1)*block_size);
-				diskFile.seekg(id_pos);
+				int id_pos = std::ios_base::beg + ((id_linenum-1)*block_size); //position of that indirect block in file
+				diskFile.seekg(id_pos); //seek to it
 				std::string ibLine;
 				getline(diskFile,ibLine,'\n');
 				int dblock;
-				char * idtarget = new char [ibLine.length()+1];
+				char * idtarget = new char [ibLine.length()+1]; //string of direct blocks inside indirect block
 	  			strcpy (idtarget, ibLine.c_str());
-				const char * q = strtok(idtarget," ");
+				const char * q = strtok(idtarget," "); //tokens of each of those
 				while(q!=NULL){//for each numbre in indirect
-
 					q = strtok(NULL," ");
 					dblock = b60_to_decimal(q);
 					//free direct block
-					free_block_list[dblock] = '0';
+					free_block_list[dblock-1] = '0'; //free direct blocks
 				}
 				//free each indirect_block and overwrite them
 				free_block_list[idremoveblock-1] = '0';
@@ -365,7 +364,7 @@ void deleteFile(std::string fileName){
 				writeFile.write(toWrite, block_size);
 				delete [] idtarget;
 			}
-			free_block_list[inode_map[fileName].double_indirect_block-1] = '0';
+			free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
 			writeFile.seekp(pos);
 			writeFile.write(toWrite, block_size);
 			//finish emptying double indirect block
