@@ -380,7 +380,6 @@ void deleteFile(std::string fileName){
 			strcpy (id_line, indirect_line.c_str());
 			const char * blocknum = strtok(id_line," ");
 			while(blocknum!=NULL){
-
 				blocknum = strtok(NULL," ");
 				dblock = b60_to_decimal(blocknum);
 				free_block_list[dblock-1] = '0';
