@@ -115,7 +115,7 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
-	read("sample2.txt", 381, 2519);
+//	read("sample2.txt", 381, 2519);
 
 
 	shutdown_globals();
