@@ -115,7 +115,7 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
-	read("sample2.txt", 381, 2519);
+//	read("sample2.txt", 381, 2519);
 
 
 	shutdown_globals();
@@ -299,8 +299,8 @@ void deleteFile(std::string fileName){
 	char * zeroed = new char[4];
 	const char * temp = decimal_to_b60(0).c_str();
 	strcpy(zeroed,temp);
-	for(int i = 0;i<(block_size/4);i++){
-		strcat(toWrite,zeroed);
+	for(int i = 0;i<(block_size-1);i++){
+		strcat(toWrite,'\0');
 	}
 	toWrite[block_size-1]='\n';
 	//empty direct
@@ -596,7 +596,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 			traverse += 1;
 			start_byte = 0;
 
-		} 
+		}
 
 		while (traverse >= 12 and traverse < (12+(block_size/4)) and num_bytes > 0) {
 			int id_block = readme.indirect_block;
@@ -632,7 +632,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 			if (num_bytes <= block_size-1) {
 				last += line;
-				break;	
+				break;
 			} else if (start_byte <= num_bytes) {
 				num_bytes -= (block_size-start_byte-1);
 			} else {
@@ -641,7 +641,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 			last += line;
 			start_byte = 0;
-			traverse += 1;	
+			traverse += 1;
 
 		} while (traverse >= (12+(block_size/4)) and num_bytes > 0) {
 			int did_block = readme.double_indirect_block;
@@ -656,7 +656,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 			if (mini_traverse2 % ((block_size/4)+1) == block_size/4) {
 				macro_traverse += 1;
 				mini_traverse2 = 0;
-	
+
 			} else {
 				std::string get_block;
 				getline(disk, get_block, '\n');
@@ -710,11 +710,11 @@ void read(std::string fname, int start_byte, int num_bytes){
 				last += line;
 				start_byte = 0;
 				traverse += 1;
-				mini_traverse2 = count+1;	
+				mini_traverse2 = count+1;
 
 			}
 
-		} 
+		}
 
 		std::cout << last << std::endl;
 
@@ -724,18 +724,21 @@ void read(std::string fname, int start_byte, int num_bytes){
 int createFile(std::string fileName){
 	int freeblock = 0;
 	if(inode_map.count(fileName) == 0){
-		int start = ((num_blocks/block_size)-1)+3;
+		int start = (3+(num_blocks/(block_size-1)));
+		//std::cout << "start " << start << std::endl;
 		for(int i = start; i<start+256; i++){
-			if(free_block_list[i-1]==0){
+			if(free_block_list[i-1]=='0'){
 				freeblock = i;
 				free_block_list[i-1] = 1;
 				break;
 			}
 		}
 		if(freeblock != 0){
-		inode_map[fileName].file_name = fileName;
-		inode_map[fileName].file_size = 0;
-		inode_map[fileName].location = freeblock;
+		inode this_node;
+		this_node.file_name = fileName;
+		this_node.file_size = 0;
+		this_node.location = freeblock;
+		inode_map[fileName] = this_node;
 		}else{
 		std::cout << "There is no room in the inode map for " << fileName << std::endl;
 		}
@@ -749,7 +752,7 @@ int createFile(std::string fileName){
 void import(std::string ssfs_file, std::string unix_file){
 	std::ifstream unix_fstream (unix_file, std::ifstream::binary);
 	if(!unix_fstream) perror(unix_file.c_str());
-	
+
 	unix_fstream.seekg(0,unix_fstream.end);
 	int unix_bytesize = unix_fstream.tellg();
 	unix_fstream.seekg(0,unix_fstream.beg);
@@ -864,14 +867,14 @@ int add_blocks(std::string fname, int num_blocks){
 			//	the right number is what i was figuring out when my computer
 			//	broke.
 			//	seekp(pos + (int)found);
-			//	ofs.write((itoa(block))), 
+			//	ofs.write((itoa(block))),
 				odiskFile.close();
-				 
+
 			//
 			}
 			num_blocks--;
-					
-			
+
+
 		}
 	}
 	if(num_blocks == 0){
