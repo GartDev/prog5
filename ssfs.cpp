@@ -333,6 +333,17 @@ void split_write(std::string fname, char to_write, int start_byte, int num_bytes
 
 void deleteFile(std::string fileName){
 	//create empty block to be written over indirect/double indirect
+
+	//How it works with producer consumer
+	//set global string = blocksize x \0 (Below block should do it)
+	/*	char * toWrite = new char[block_size];
+		for(int i = 0;i<(block_size);i++){
+			toWrite[i] = '\0';
+		}
+		*/
+	//call 2 block num
+	//buffer = (2,inode_map[fileName].location-1)
+	//Should only have to write to inode location, purely for fabrication of inode map.
 	//empty direct
 	int directsum = 0;
 	if(inode_map.count(fileName)==0){
@@ -434,9 +445,6 @@ void deleteFile(std::string fileName){
 
 	}
 	char * toWrite = new char[block_size];
-	char * zeroed = new char[4];
-	const char * temp = decimal_to_b60(0).c_str();
-	strcpy(zeroed,temp);
 	for(int i = 0;i<(block_size-1);i++){
 		//toWrite[i] = '\0';
 		toWrite[i] = '\0';
@@ -458,6 +466,7 @@ void deleteFile(std::string fileName){
 
 void list(){
 	//for each element in inodemap, display the inode->name and inode->size
+
 	if(inode_map.empty()){
 		return;
 	}
@@ -573,12 +582,12 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 				int ctr = 0;
 				while (line.length() != 3 and line.substr(0, line.find(' ')) != "000") {
 					line = line.substr(line.find(' ')+1, line.length());
-					
+
 					ctr++;
 				}
 				idisk.close();
 
-				
+
 
 				std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
@@ -886,7 +895,7 @@ int write(std::string fname, char to_write, int start_byte, int num_bytes){
 void read(std::string fname, int start_byte, int num_bytes){
 	//georege aint got no sauce
 
-	std::cout << " START: " << start_byte << " NUM: " << num_bytes << std::endl; 
+	std::cout << " START: " << start_byte << " NUM: " << num_bytes << std::endl;
 
 	inode readme = inode_map[fname];
 	int current_size = readme.file_size;
@@ -1063,6 +1072,9 @@ int createFile(std::string fileName){
 }
 
 void import(std::string ssfs_file, std::string unix_file){
+	//Producer/Consumer:
+	//Global buffer = getline from unix
+	//signal scheduler with 2, first/next block of file 
 	std::ifstream unix_fstream (unix_file, std::ifstream::binary);
 	if(!unix_fstream) perror(unix_file.c_str());
 
