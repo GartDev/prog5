@@ -1,1 +1,1 @@
-READ sample2.txt 1 5000
+WRITE sample3.txt c 0 100
