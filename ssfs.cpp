@@ -15,6 +15,7 @@ using namespace std;
 
 pthread_cond_t full, empty;
 pthread_mutex_t mutex;
+pthread_mutex_t child_mutex;
 pthread_t *producers;
 int num_threads;
 
@@ -183,25 +184,28 @@ void *read_file(void *arg){
 			std::cout << line << ": command not found" << std::endl;
 		}
 	}
-	std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
 	opfile.close();
 	shutdown_globals();
-	pthread_mutex_lock(&mutex);
-	//cout << "AAAAAAAAHHHHHHH" << std::endl;
+	pthread_mutex_lock(&child_mutex);
 	num_threads--;
+	pthread_mutex_unlock(&child_mutex);
+	std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
 	//pthread_cond_signal(&empty);
-	pthread_mutex_unlock(&mutex);
 	pthread_exit(NULL);
 }
 
 void disk_scheduler(){
 	while (num_threads){
+	puts("disk_scheduler!");
 		pthread_mutex_lock(&mutex);
-		while(buffer[0] == 0 && num_threads)
+		while(buffer[0] == 0 && num_threads){
+			printf("num_threads: %d\n", num_threads);
 			pthread_cond_wait(&full, &mutex);
+		}
+		puts("disk_scheduler!!");
 		if(buffer[0] == 1){
 			//read
-			//read_disk(buffer[1]);
+			read_primitive(buffer[1]);
 		}else if(buffer[0] == 2){
 			//write
 			//write_disk(buffer[1]);
