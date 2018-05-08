@@ -434,7 +434,7 @@ void deleteFile(std::string fileName){
 		if(atCapacity(inode_map[fileName].indirect_block,0) == 1){
 			int lineNum = inode_map[fileName].double_indirect_block;
 			std::string dibLine;
-			dibline = read_request(lineNum);
+			dibLine = read_request(lineNum);
 			int idremoveblock;
 			char * target = new char [dibLine.length()];
   			strcpy (target, dibLine.c_str()); //copy line of doubleindirect into target
@@ -460,7 +460,7 @@ void deleteFile(std::string fileName){
 			free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
 			int indirect_block_num = inode_map[fileName].indirect_block;
 			int dblock;
-			indirect_line = read_request(indirect_block);
+			std::string indirect_line = read_request(indirect_block_num);
 			char * id_line = new char[indirect_line.length()];
 			strcpy (id_line, indirect_line.c_str());
 			const char * blocknum = strtok(id_line," ");
@@ -470,12 +470,11 @@ void deleteFile(std::string fileName){
 				free_block_list[dblock-1] = '0';
 			}
 			free_block_list[inode_map[fileName].indirect_block-1] = '0';
-			diskFile.close();
 			delete [] id_line;
 			delete [] target;
 		}else{ //if indirect_block isnt full
 			int indirect_block_num = inode_map[fileName].indirect_block;
-			int indirect_pos = ((indirect_block_num);
+			int indirect_pos = ((indirect_block_num));
 			int dblock;
 			std::string indirect_line;
 			indirect_line = read_request(indirect_pos);
