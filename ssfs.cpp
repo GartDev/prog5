@@ -166,7 +166,7 @@ void *read_file(void *arg){
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
 			std::cout << "Writing character '" << c << "' into "<< ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			//write(ssfs_file,c,start_byte,num_bytes);
+			write(ssfs_file,c,start_byte,num_bytes);
 		}else if(command == "READ"){
 			line_stream >> ssfs_file;
 			int start_byte, num_bytes;
@@ -804,15 +804,19 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 			int i;
 			for (i = 0 ; i < blocks_to_add.size() ; i++) {
 				std::cout << blocks_to_add[i] << std::endl;
-				
-				
-
-//				free_block_list[blocks_to_add[i]+1] = '0';
 			}
 		}
 
 
+	} else {
+		// no need to allocate just write
 	}
+
+	int starting_block = start_byte / (block_size-1);
+	int offset = start_byte % (block_size-1);
+
+	std::string to_write = "\0" * (offset-1);
+
 
 	return 0;
 
