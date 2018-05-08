@@ -200,11 +200,11 @@ void disk_scheduler(){
 			pthread_cond_wait(&full, &mutex);
 		if(buffer[0] == 1){
 			//read
-			printf("Taking block %d\n",buffer[1]);
 			read_primitive(buffer[1]);
 		}else if(buffer[0] == 2){
 			//write
-			//write_disk(buffer[1]);
+			write_primitive(buffer[1]);
+			global_buffer = "";
 		}
 		buffer[0] = 0;
 		pthread_cond_signal(&empty);
@@ -217,7 +217,6 @@ void disk_scheduler(){
 
 void read_request(int block){
 	pthread_mutex_lock(&mutex);
-	printf("%d\n", buffer[0]);
 	while(buffer[0] != 0)
 		pthread_cond_wait(&empty,&mutex);
 	global_buffer = "";
@@ -237,6 +236,9 @@ void write_request(int block){
 	buffer[0] = 2;
 	buffer[1] = block;
 	pthread_cond_signal(&full);
+	while (global_buffer != "") {
+		pthread_cond_wait(&empty, &mutex);
+	}
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -555,8 +557,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 		int j;
 		for (j = 0 ; j < 12 ; j++) {
 			if (blocks_to_add.size() == blocks_needed) {
-				break;
-			}
+				break; }
 
 			if (writ.direct_blocks[j] == 0) {
 				int k;
@@ -948,8 +949,6 @@ int write(std::string fname, char to_write, int start_byte, int num_bytes){
 
 
 void read_primitive(int block_number) {
-	printf("Primitive: Block %d\n", block_number);
-
 	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 	disk.seekg(std::ios_base::beg + (block_number-1)*block_size);
 
@@ -964,6 +963,10 @@ void read_primitive(int block_number) {
 void read(std::string fname, int start_byte, int num_bytes){
 	//georege aint got no sauce
 
+	if (start_byte == 0) {
+		start_byte = 1;
+	}
+
 	printf("START: %d, NUM: %d\n", start_byte, num_bytes);
 
 	inode readme = inode_map[fname];
@@ -973,7 +976,6 @@ void read(std::string fname, int start_byte, int num_bytes){
 		printf("Start byte is out of range for read on %s\n", readme.file_name.c_str());
 
 	} else {
-		// replace me with primitive
 		std::string last = "";
 
 		if((start_byte + num_bytes-1) > current_size){
@@ -991,8 +993,6 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 			int block = readme.direct_blocks[traverse];
 
-			printf("Requesting block %d\n", block);
-
 			read_request(block);
 
 			/*
@@ -1002,10 +1002,6 @@ void read(std::string fname, int start_byte, int num_bytes){
 			*/
 
 			std::string line_s = global_buffer;
-
-			printf("Traverse = %d\n", traverse);
-
-			printf("Line_s = %s\n", line_s.c_str());
 
 			int len = line_s.length();
 
