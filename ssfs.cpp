@@ -426,7 +426,9 @@ void deleteFile(std::string fileName){
 			if(inode_map[fileName].direct_blocks[i]!=0){
 				directsum += 1;
 				int freeIndex = inode_map[fileName].direct_blocks[i]-1;
+				pthread_mutex_lock(&map_mutex);
 				free_block_list[freeIndex]= '0';
+				pthread_mutex_unlock(&map_mutex);
 			}
 		}
 	}
@@ -452,12 +454,18 @@ void deleteFile(std::string fileName){
 				while(q!=NULL){//for each numbre in indirect
 					q = strtok(NULL," ");
 					dblock = b60_to_decimal(q);
+					pthread_mutex_lock(&map_mutex);
 					free_block_list[dblock-1] = '0'; //free direct blocks
+					pthread_mutex_unlock(&map_mutex);
 				}
+				pthread_mutex_lock(&map_mutex);
 				free_block_list[idremoveblock-1] = '0';
+				pthread_mutex_unlock(&map_mutex);
 				delete [] idtarget;
 			}
+			pthread_mutex_lock(&map_mutex);
 			free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
+			pthread_mutex_unlock(&map_mutex);
 			int indirect_block_num = inode_map[fileName].indirect_block;
 			int dblock;
 			std::string indirect_line = read_request(indirect_block_num);
@@ -467,9 +475,13 @@ void deleteFile(std::string fileName){
 			while(blocknum!=NULL){
 				blocknum = strtok(NULL," ");
 				dblock = b60_to_decimal(blocknum);
+				pthread_mutex_lock(&map_mutex);
 				free_block_list[dblock-1] = '0';
+				pthread_mutex_unlock(&map_mutex);
 			}
+			pthread_mutex_lock(&map_mutex);
 			free_block_list[inode_map[fileName].indirect_block-1] = '0';
+			pthread_mutex_unlock(&map_mutex);
 			delete [] id_line;
 			delete [] target;
 		}else{ //if indirect_block isnt full
@@ -484,21 +496,28 @@ void deleteFile(std::string fileName){
 			while(blocknum!=NULL){
 				blocknum = strtok(NULL," ");
 				dblock = b60_to_decimal(blocknum);
+				pthread_mutex_lock(&map_mutex);
 				free_block_list[dblock-1] = '0';
+				pthread_mutex_unlock(&map_mutex);
 			}
+			pthread_mutex_lock(&map_mutex);
 			free_block_list[inode_map[fileName].indirect_block-1] = '0';
+			pthread_mutex_unlock(&map_mutex);
 			delete [] id_line;
 		}
 	}//Final inode deletion
+	pthread_mutex_lock(&map_mutex);
 	free_block_list[inode_map[fileName].location - 1] = '0';
+	pthread_mutex_unlock(&map_mutex);
 	int local = (inode_map[fileName].location);
 	char * toWrite = new char[block_size];
 	for(int i = 0;i<(block_size);i++){
 		toWrite[i] = '\0';
 	}
 	write_request(toWrite,local);
+	pthread_mutex_lock(&map_mutex);
 	inode_map.erase(fileName);
-	//pthread_mutex_unlock(&map_mutex);
+	pthread_mutex_unlock(&map_mutex);
 	delete [] toWrite;
 	return;
 }
@@ -1139,7 +1158,10 @@ int createFile(std::string fileName){
 			if(free_block_list[i]=='0'){
 				//cout <<" i = " << i << endl;
 				freeblock = i+1;
+
+				pthread_mutex_lock(&map_mutex);
 				free_block_list[i] = '1';
+				pthread_mutex_unlock(&map_mutex);
 				break;
 			}
 		}
