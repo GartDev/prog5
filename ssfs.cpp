@@ -23,6 +23,8 @@ int files_in_system;
 std::map<std::string, inode> inode_map;
 std::string free_block_list;
 
+std::string global_buffer;
+
 void get_system_parameters();
 void build_inode_map();
 void build_free_block_list();
@@ -31,6 +33,8 @@ int b60_to_decimal(const char * target);
 std::string decimal_to_b60(int target);
 
 std::fstream& go_to_line(std::fstream& file, unsigned int num);
+
+void read_primitive(int block_number);
 
 void split_write(std::string fname, char to_write, int start_byte, int num_bytes);
 int createFile(std::string fileName);
@@ -882,6 +886,20 @@ int write(std::string fname, char to_write, int start_byte, int num_bytes){
 	return 1;
 }
 */
+
+
+
+void read_primitive(int block_number) {
+	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
+	disk.seekg(std::ios_base::beg + (block_number-1)*block_size);
+
+	char buf[block_size-1];
+	disk.read(buf, block_size-1);
+
+	global_buffer = std::string(buf);
+
+	disk.close();
+}
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//georege aint got no sauce
