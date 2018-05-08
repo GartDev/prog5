@@ -123,7 +123,7 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
-	read("sample2.txt", 5009, 10000);
+	write("sample2.txt", 0, 100);
 
 	shutdown_globals();
 
@@ -913,6 +913,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 		std::cout << "Start byte is out of range for read on " << readme.file_name << std::endl;
 
 	} else {
+		// replace me with primitive
 		std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 
 		std::string last = "";
@@ -931,6 +932,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 		while (traverse < 12 and num_bytes > 0) {
 
 			int block = readme.direct_blocks[traverse];
+
 
 			disk.seekg((block-1)*block_size, std::ios::beg);
 			char line[block_size-1];
