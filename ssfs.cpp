@@ -40,7 +40,7 @@ std::string decimal_to_b60(int target);
 std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 void read_primitive(int block_number);
-
+void write_primitive(int block_number);
 int createFile(std::string fileName);
 void deleteFile(std::string fileName);
 int write(std::string fname, char to_write, int start_byte, int num_bytes);
@@ -72,7 +72,7 @@ int main(int argc, char **argv){
 	//write("sample3.txt", 'c', 0, 200);
 
 	shutdown_globals();
-
+	
 /*
 	inode * s = new inode("sample.txt", 128);
 
@@ -940,7 +940,22 @@ int write(std::string fname, char to_write, int start_byte, int num_bytes){
 }
 */
 
+void write_primitive(int block_number){
+	//open and seek to the block you want to write in disk
+	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
+	disk.seekp(std::ios_base::beg + (block_number-1)*block_size);
 
+	
+	//copy the global buffer into a local buffer for writing
+//	char buf[block_size-1];
+//	strcpy(buf, global_buffer.c_str());
+
+	//write to disk
+	disk.write(global_buffer.c_str(), block_size-1);
+	
+	//close disk
+	disk.close();
+}
 
 void read_primitive(int block_number) {
 	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
