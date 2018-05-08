@@ -15,7 +15,9 @@ using namespace std;
 
 pthread_cond_t full, empty;
 pthread_mutex_t mutex;
-pthread_mutex_t child_mutex;
+pthread_mutex_t map_mutex;
+pthread_mutex_t num_mutex;
+pthread_mutex_t free_mutex;
 pthread_t *producers;
 int num_threads;
 
@@ -26,7 +28,7 @@ int files_in_system;
 std::map<std::string, inode> inode_map;
 std::string free_block_list;
 
-//first int is 1 = read, 2 = write, 0 = do nothing
+//first int is 1 = read, 2 = write, 0 = do nothing 3 = shutdown
 //second int is block location
 int buffer[2] = {};
 std::string global_buffer;
@@ -56,6 +58,7 @@ void *read_file(void *arg);
 void disk_scheduler();
 void write_request(int block);
 void read_request(int block);
+void shutdown_request();
 
 
 
@@ -73,7 +76,7 @@ int main(int argc, char **argv){
 //	read("sample2.txt", 1, 100);
 	//write("sample3.txt", 'c', 0, 200);
 
-	shutdown_globals();
+	//shutdown_globals();
 	
 /*
 	inode * s = new inode("sample.txt", 128);
@@ -121,7 +124,6 @@ int main(int argc, char **argv){
 	for(int i = 0; i < num_threads; ++i){
 		pthread_join(producers[i], NULL);
 	}
-	delete [] producers;
 
 	pthread_exit(NULL);
 	return 0;
@@ -186,11 +188,14 @@ void *read_file(void *arg){
 		}
 	}
 	opfile.close();
-	shutdown_globals();
-	pthread_mutex_lock(&child_mutex);
+	//shutdown_globals();
+	pthread_mutex_lock(&num_mutex);
 	num_threads--;
-	pthread_mutex_unlock(&child_mutex);
+	pthread_mutex_unlock(&num_mutex);
 	std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
+	if(num_threads == 0){
+		shutdown_request();
+	}
 	//pthread_cond_signal(&empty);
 	pthread_exit(NULL);
 }
@@ -200,14 +205,17 @@ void disk_scheduler(){
 		pthread_mutex_lock(&mutex);
 		while(buffer[0] == 0)
 			pthread_cond_wait(&full, &mutex);
-		}
-		puts("disk_scheduler!!");
 		if(buffer[0] == 1){
 			//read
 			read_primitive(buffer[1]);
 		}else if(buffer[0] == 2){
 			//write
 			//write_disk(buffer[1]);
+		}else if(buffer[0] == 3){
+			//shutdown
+			shutdown_globals();
+			delete [] producers;
+			pthread_exit(NULL);
 		}
 		buffer[0] = 0;
 		pthread_cond_signal(&empty);
@@ -215,7 +223,6 @@ void disk_scheduler(){
 		//cout << "num_threads: " << num_threads << std::endl;
 		//pthread_cond_wait(&empty, &mutex);
 	}
-
 }
 
 void read_request(int block){
@@ -239,6 +246,14 @@ void write_request(int block){
 		pthread_cond_wait(&empty,&mutex);
 	buffer[0] = 2;
 	buffer[1] = block;
+	pthread_cond_signal(&full);
+	pthread_mutex_unlock(&mutex);
+}
+
+void shutdown_request(){
+	pthread_mutex_lock(&mutex);
+	buffer[0] = 3;
+	buffer[1] = 0;
 	pthread_cond_signal(&full);
 	pthread_mutex_unlock(&mutex);
 }
@@ -1177,7 +1192,9 @@ int createFile(std::string fileName){
 		this_node.file_size = 0;
 		//cout <<" freeblock = " << freeblock << endl;
 		this_node.location = freeblock;
+		pthread_mutex_lock(&map_mutex);
 		inode_map[fileName] = this_node;
+		pthread_mutex_lock(&map_mutex);
 		}else{
 		std::cout << "There is no room in the inode map for " << fileName << std::endl;
 		}
