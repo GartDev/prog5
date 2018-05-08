@@ -1,7 +1,6 @@
 /* https://is2-ssl.mzstatic.com/image/thumb/Video/v4/ed/79/b0/ed79b0c0-7617-a714-15be-2378cdb58221/source/1200x630bb.jpg */
 
 #include "inode.h"
-//#include "write_request.h"
 #include <fstream>
 #include <limits>
 #include <stdlib.h>
@@ -15,6 +14,9 @@ using namespace std;
 
 pthread_cond_t full, empty;
 pthread_mutex_t mutex;
+pthread_mutex_t map_mutex;
+pthread_mutex_t num_mutex;
+pthread_mutex_t free_mutex;
 pthread_t *producers;
 int num_threads;
 
@@ -25,7 +27,7 @@ int files_in_system;
 std::map<std::string, inode> inode_map;
 std::string free_block_list;
 
-//first int is 1 = read, 2 = write, 0 = do nothing
+//first int is 1 = read, 2 = write, 0 = do nothing 3 = shutdown
 //second int is block location
 int buffer[2] = {};
 std::string global_buffer;
@@ -53,8 +55,9 @@ void import(std::string ssfs_file, std::string unix_file);
 
 void *read_file(void *arg);
 void disk_scheduler();
-void write_request(int block);
-void read_request(int block);
+void write_request(std::string out_string, int block);
+std::string read_request(int block);
+void shutdown_request();
 
 
 
@@ -118,7 +121,6 @@ int main(int argc, char **argv){
 	for(int i = 0; i < num_threads; ++i){
 		pthread_join(producers[i], NULL);
 	}
-	delete [] producers;
 
 	pthread_exit(NULL);
 	return 0;
@@ -143,7 +145,7 @@ void *read_file(void *arg){
 		if(command == "CREATE"){
 			line_stream >> ssfs_file;
 			std::cout << "Creating " << ssfs_file << std::endl;
-			//createFile(ssfs_file);
+			createFile(ssfs_file);
 		}else if(command == "IMPORT"){
 			line_stream >> ssfs_file;
 			std::string unix_file;
@@ -157,7 +159,7 @@ void *read_file(void *arg){
 		}else if(command == "DELETE"){
 			line_stream >> ssfs_file;
 			std::cout << "Deleting " << ssfs_file << std::endl;
-			//deleteFile(ssfs_file);
+			deleteFile(ssfs_file);
 		}else if(command == "WRITE"){
 			line_stream >> ssfs_file;
 			char c;
@@ -182,14 +184,16 @@ void *read_file(void *arg){
 			std::cout << line << ": command not found" << std::endl;
 		}
 	}
-	std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
 	opfile.close();
-	shutdown_globals();
-	pthread_mutex_lock(&mutex);
-	//cout << "AAAAAAAAHHHHHHH" << std::endl;
+	//shutdown_globals();
+	pthread_mutex_lock(&num_mutex);
 	num_threads--;
+	pthread_mutex_unlock(&num_mutex);
+	std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
+	if(num_threads == 0){
+		shutdown_request();
+	}
 	//pthread_cond_signal(&empty);
-	pthread_mutex_unlock(&mutex);
 	pthread_exit(NULL);
 }
 
@@ -205,6 +209,13 @@ void disk_scheduler(){
 			//write
 			write_primitive(buffer[1]);
 			global_buffer = "";
+		}else if(buffer[0] == 3){
+			//shutdown
+			puts("HEY LOL");
+			shutdown_globals();
+			puts("HEY");
+			delete [] producers;
+			pthread_exit(NULL);
 		}
 		buffer[0] = 0;
 		pthread_cond_signal(&empty);
@@ -212,10 +223,9 @@ void disk_scheduler(){
 		//cout << "num_threads: " << num_threads << std::endl;
 		//pthread_cond_wait(&empty, &mutex);
 	}
-
 }
 
-void read_request(int block){
+std::string read_request(int block){
 	pthread_mutex_lock(&mutex);
 	while(buffer[0] != 0)
 		pthread_cond_wait(&empty,&mutex);
@@ -226,19 +236,29 @@ void read_request(int block){
 	while (global_buffer == "") {
 		pthread_cond_wait(&empty, &mutex);
 	}	
+	std::string return_string = global_buffer;
 	pthread_mutex_unlock(&mutex);
 }
 
-void write_request(int block){
+void write_request(std::string out_string, int block){
 	pthread_mutex_lock(&mutex);
 	while(buffer[0] != 0)
 		pthread_cond_wait(&empty,&mutex);
 	buffer[0] = 2;
 	buffer[1] = block;
+	global_buffer = out_string;
 	pthread_cond_signal(&full);
 	while (global_buffer != "") {
 		pthread_cond_wait(&empty, &mutex);
 	}
+	pthread_mutex_unlock(&mutex);
+}
+
+void shutdown_request(){
+	pthread_mutex_lock(&mutex);
+	buffer[0] = 3;
+	buffer[1] = 0;
+	pthread_cond_signal(&full);
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -514,7 +534,9 @@ void deleteFile(std::string fileName){
 	writeFile.seekp(std::ios::beg+local);
 	writeFile.write(toWrite,block_size*sizeof(char));
 	writeFile.close();
+	pthread_mutex_lock(&map_mutex);
 	inode_map.erase(fileName);
+	pthread_mutex_unlock(&map_mutex);
 	delete [] toWrite;
 	delete [] zeroed;
 	return;
@@ -1015,7 +1037,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 			int block = readme.direct_blocks[traverse];
 
-			read_request(block);
+			std::string line_s = read_request(block);
 
 			/*
 			disk.seekg((block-1)*block_size, std::ios::beg);
@@ -1023,7 +1045,6 @@ void read(std::string fname, int start_byte, int num_bytes){
 			disk.read(line, block_size-1);
 			*/
 
-			std::string line_s = global_buffer;
 
 			int len = line_s.length();
 
@@ -1048,9 +1069,7 @@ void read(std::string fname, int start_byte, int num_bytes){
 			getline(disk, line, '\n');
 */
 
-			read_request(id_block);
-
-			std::string line = global_buffer;
+			std::string line = read_request(id_block);
 
 			int mini_traverse = traverse - 12;
 
@@ -1068,9 +1087,8 @@ line = line.substr(0, line.find(' '));
 			disk.read(line2, block_size-1);
 */
 
-			read_request(direct);
+			std::string line_s = read_request(direct);
 
-			std::string line_s = global_buffer;
 
 			int len = line_s.length();
 
@@ -1098,9 +1116,8 @@ line = line.substr(0, line.find(' '));
 			getline(disk, line, '\n');
 			*/
 
-			read_request(did_block);
+			std::string line = read_request(did_block);
 
-			std::string line = global_buffer;
 
 			int id_block_index = (macro_traverse / (block_size/4));
 
@@ -1118,8 +1135,7 @@ line = line.substr(0, line.find(' '));
 			getline(disk, line, '\n');
 			*/
 
-			read_request(id_block);
-			line = global_buffer;
+			line = read_request(id_block);
 
 			int direct_block_index = macro_traverse % (block_size/4);
 
@@ -1135,9 +1151,7 @@ line = line.substr(0, line.find(' '));
 			disk.read(line2, block_size-1);
 			*/
 
-			read_request(direct);
-
-			std::string line_s = global_buffer;
+			std::string line_s = read_request(direct);
 
 			int len = line_s.length();
 
@@ -1177,7 +1191,9 @@ int createFile(std::string fileName){
 		this_node.file_size = 0;
 		//cout <<" freeblock = " << freeblock << endl;
 		this_node.location = freeblock;
+		pthread_mutex_lock(&map_mutex);
 		inode_map[fileName] = this_node;
+		pthread_mutex_unlock(&map_mutex);
 		}else{
 		std::cout << "There is no room in the inode map for " << fileName << std::endl;
 		}
@@ -1417,7 +1433,6 @@ inode_map["sample2.txt"] = sample2;
 */
 
 	for (auto const& it : inode_map) {
-
 		int seek = 0;
 
 		disk.write(it.second.file_name.c_str(), it.second.file_name.length()*sizeof(char));
