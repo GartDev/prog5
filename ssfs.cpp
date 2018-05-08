@@ -1,7 +1,7 @@
 /* https://is2-ssl.mzstatic.com/image/thumb/Video/v4/ed/79/b0/ed79b0c0-7617-a714-15be-2378cdb58221/source/1200x630bb.jpg */
 
 #include "inode.h"
-#include "write_request.h"
+//#include "write_request.h"
 #include <fstream>
 #include <limits>
 #include <stdlib.h>
@@ -297,6 +297,7 @@ void build_free_block_list() {
 // Disk Ops below ------------------------
 
 void split_write(std::string fname, char to_write, int start_byte, int num_bytes){
+	/*
 	//I'm assuming that there is a global buffer somewhere I can write into
 	std::string better_char = "G";
 	better_char.front() = to_write;
@@ -305,7 +306,7 @@ void split_write(std::string fname, char to_write, int start_byte, int num_bytes
 	       	int easy_bytes = num_bytes - extra;
 		int i;
 		int j;
-		
+
 		for(i = 0; i < easy_bytes/block_size; i++){
 			write_request piece = write_request(fname, start_byte, block_size-1);
 			for(j = 0; j < (block_size-1); j++){
@@ -314,7 +315,7 @@ void split_write(std::string fname, char to_write, int start_byte, int num_bytes
 			//send request to buffer in scheduler
 		}
 	}
-			
+*/
 }
 
 void deleteFile(std::string fileName){
@@ -419,12 +420,26 @@ void deleteFile(std::string fileName){
 		}
 
 	}
+	char * toWrite = new char[block_size];
+	char * zeroed = new char[4];
+	const char * temp = decimal_to_b60(0).c_str();
+	strcpy(zeroed,temp);
+	for(int i = 0;i<(block_size-1);i++){
+		//toWrite[i] = '\0';
+		toWrite[i] = '\0';
+	}
+	toWrite[block_size-1]='\n'; //create blank line
 	//cout << "free_block_list[" << inode_map[fileName].location <<"] = " << free_block_list[inode_map[fileName].location];
 	free_block_list[inode_map[fileName].location - 1] = '0';
 
 	std::ofstream writeFile(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 	int local = (inode_map[fileName].location-1) * (block_size);
+	writeFile.seekp(std::ios::beg+local);
+	writeFile.write(toWrite,block_size*sizeof(char));
+	writeFile.close();
 	inode_map.erase(fileName);
+	delete [] toWrite;
+	delete [] zeroed;
 	return;
 }
 
