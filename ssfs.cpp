@@ -13,8 +13,10 @@
 
 using namespace std;
 
-pthread_cond_t fill, empty;
+pthread_cond_t full, empty;
 pthread_mutex_t mutex;
+pthread_t *producers;
+int num_threads;
 
 std::string disk_file_name;
 int num_blocks;
@@ -23,6 +25,9 @@ int files_in_system;
 std::map<std::string, inode> inode_map;
 std::string free_block_list;
 
+//first int is 1 = read, 2 = write, 0 = do nothing
+//second int is block location
+int buffer[2] = {};
 std::string global_buffer;
 
 void get_system_parameters();
@@ -36,7 +41,6 @@ std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 void read_primitive(int block_number);
 
-void split_write(std::string fname, char to_write, int start_byte, int num_bytes);
 int createFile(std::string fileName);
 void deleteFile(std::string fileName);
 int write(std::string fname, char to_write, int start_byte, int num_bytes);
@@ -47,70 +51,12 @@ int atCapacity(int lineNum,int flag);
 void shutdown_globals();
 void import(std::string ssfs_file, std::string unix_file);
 
+void *read_file(void *arg);
+void disk_scheduler();
+void write_request(int block);
+void read_request(int block);
 
-void *read_file(void *arg){
-	std::ifstream opfile;
-	char* thread_name = (char*)arg;
-	opfile.open(thread_name);
-	if(!opfile){
-		perror(thread_name);
-		pthread_exit(NULL);
-	}
-	//print lines of the file, don't delete yet
-	std::string line;
-	while(std::getline(opfile,line)){
-        std::cout << line << std::endl;
-		std::istringstream line_stream(line);
-		std::string command;
-		line_stream >> command;
-		std::string ssfs_file;
-		if(command == "CREATE"){
-			line_stream >> ssfs_file;
-			std::cout << "Creating " << ssfs_file << std::endl;
-			createFile(ssfs_file);
-		}else if(command == "IMPORT"){
-			line_stream >> ssfs_file;
-			std::string unix_file;
-			line_stream >> unix_file;
-			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
-			import(ssfs_file,unix_file);
-		}else if(command == "CAT"){
-			line_stream >> ssfs_file;
-			std::cout << "Contents of " << ssfs_file << std::endl;
-			ssfsCat(ssfs_file);
-		}else if(command == "DELETE"){
-			line_stream >> ssfs_file;
-			std::cout << "Deleting " << ssfs_file << std::endl;
-			deleteFile(ssfs_file);
-		}else if(command == "WRITE"){
-			line_stream >> ssfs_file;
-			char c;
-			int start_byte, num_bytes;
-			line_stream >> c;
-			line_stream >> start_byte;
-			line_stream >> num_bytes;
-			std::cout << "Writing character '" << c << "' into "<< ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			write(ssfs_file,c,start_byte,num_bytes);
-		}else if(command == "READ"){
-			line_stream >> ssfs_file;
-			int start_byte, num_bytes;
-			line_stream >> start_byte;
-			line_stream >> num_bytes;
-			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			read(ssfs_file,start_byte,num_bytes);
-		}else if(command == "LIST"){
-			list();
-		}else if(command == "SHUTDOWN"){
-			std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
-			shutdown_globals();
-			pthread_exit(NULL);
-		}else {
-			std::cout << line << ": command not found" << std::endl;
-		}
-	}
-	opfile.close();
-	pthread_exit(NULL);
-}
+
 
 int main(int argc, char **argv){
 	if(argc < 2){
@@ -123,25 +69,12 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
-	read("sample2.txt", 5009, 10000);
+	//write("sample3.txt", 'c', 0, 200);
 
 	shutdown_globals();
 
 /*
-		std::string line;
-			getline(disk, line, '\n');
-
-			while (line.length() < (std::min(num_bytes, (block_size-1))-start_byte)) {
-				std::string temp;
-				std::cout << "Caught at traverse = " << traverse  << std::endl;
-				getline(disk, temp, '\n');
-				line += temp;
-			}
-
-			int len = line.length();
-
-			line = line.substr(0, std::min(num_bytes, std::min(len, block_size-1)));
-
+	inode * s = new inode("sample.txt", 128);
 
 	int j;
 	for (j = 0 ; j < 12 ; j++) {
@@ -168,18 +101,138 @@ int main(int argc, char **argv){
 		std::cout << s2->direct_blocks[j] << std::endl;
 	}
 */
-	pthread_t p;
 	int rc;
+
+	pthread_cond_init(&empty, NULL);
+	pthread_cond_init(&full, NULL);
+
+	num_threads = argc - 2;
+	producers = new pthread_t[num_threads];
 	for(int i = 2; i < argc; i++){
-		rc = pthread_create(&p, NULL, read_file, (void*)argv[i]);
+		rc = pthread_create(&producers[i-2], NULL, read_file, (void*)argv[i]);
 		if(rc){
 			std::cout << "Unable to create thread." << std::endl;
 			exit(0);
 		}
 	}
-	pthread_exit(NULL);
+	disk_scheduler();
+	for(int i = 0; i < num_threads; ++i){
+		pthread_join(producers[i], NULL);
+	}
+	delete [] producers;
 
+	pthread_exit(NULL);
 	return 0;
+}
+
+void *read_file(void *arg){
+	std::ifstream opfile;
+	char* thread_name = (char*)arg;
+	opfile.open(thread_name);
+	if(!opfile){
+		perror(thread_name);
+		pthread_exit(NULL);
+	}
+	//print lines of the file, don't delete yet
+	std::string line;
+	while(std::getline(opfile,line)){
+        std::cout << line << std::endl;
+		std::istringstream line_stream(line);
+		std::string command;
+		line_stream >> command;
+		std::string ssfs_file;
+		if(command == "CREATE"){
+			line_stream >> ssfs_file;
+			std::cout << "Creating " << ssfs_file << std::endl;
+			//createFile(ssfs_file);
+		}else if(command == "IMPORT"){
+			line_stream >> ssfs_file;
+			std::string unix_file;
+			line_stream >> unix_file;
+			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
+			//import(ssfs_file,unix_file);
+		}else if(command == "CAT"){
+			line_stream >> ssfs_file;
+			std::cout << "Contents of " << ssfs_file << std::endl;
+			//ssfsCat(ssfs_file);
+		}else if(command == "DELETE"){
+			line_stream >> ssfs_file;
+			std::cout << "Deleting " << ssfs_file << std::endl;
+			//deleteFile(ssfs_file);
+		}else if(command == "WRITE"){
+			line_stream >> ssfs_file;
+			char c;
+			int start_byte, num_bytes;
+			line_stream >> c;
+			line_stream >> start_byte;
+			line_stream >> num_bytes;
+			std::cout << "Writing character '" << c << "' into "<< ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
+			//write(ssfs_file,c,start_byte,num_bytes);
+		}else if(command == "READ"){
+			line_stream >> ssfs_file;
+			int start_byte, num_bytes;
+			line_stream >> start_byte;
+			line_stream >> num_bytes;
+			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
+			//read(ssfs_file,start_byte,num_bytes);
+		}else if(command == "LIST"){
+			list();
+		}else if(command == "SHUTDOWN"){
+			break;
+		}else {
+			std::cout << line << ": command not found" << std::endl;
+		}
+	}
+	std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
+	opfile.close();
+	shutdown_globals();
+	pthread_mutex_lock(&mutex);
+	//cout << "AAAAAAAAHHHHHHH" << std::endl;
+	num_threads--;
+	//pthread_cond_signal(&empty);
+	pthread_mutex_unlock(&mutex);
+	pthread_exit(NULL);
+}
+
+void disk_scheduler(){
+	while (num_threads){
+		pthread_mutex_lock(&mutex);
+		while(buffer[0] == 0 && num_threads)
+			pthread_cond_wait(&full, &mutex);
+		if(buffer[0] == 1){
+			//read
+			//read_disk(buffer[1]);
+		}else if(buffer[0] == 2){
+			//write
+			//write_disk(buffer[1]);
+		}
+		buffer[0] = 0;
+		pthread_cond_signal(&empty);
+		pthread_mutex_unlock(&mutex);
+		//cout << "num_threads: " << num_threads << std::endl;
+		//pthread_cond_wait(&empty, &mutex);
+	}
+
+}
+
+void read_request(int block){
+	pthread_mutex_lock(&mutex);
+	while(buffer[0] != 0)
+		pthread_cond_wait(&empty,&mutex);
+	buffer[0] = 1;
+	buffer[1] = block;
+	pthread_cond_signal(&full);
+	pthread_mutex_unlock(&mutex);
+}
+
+void write_request(int block){
+	pthread_mutex_lock(&mutex);
+	while(buffer[0] != 0)
+		pthread_cond_wait(&empty,&mutex);
+	buffer[0] = 2;
+	buffer[1] = block;
+	pthread_cond_signal(&full);
+	pthread_mutex_unlock(&mutex);
 }
 
 std::fstream& go_to_line(std::fstream& file, unsigned int num){
