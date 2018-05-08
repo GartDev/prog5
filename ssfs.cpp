@@ -41,7 +41,7 @@ std::string decimal_to_b60(int target);
 std::fstream& go_to_line(std::fstream& file, unsigned int num);
 
 void read_primitive(int block_number);
-
+void write_primitive(int block_number);
 int createFile(std::string fileName);
 void deleteFile(std::string fileName);
 int write(std::string fname, char to_write, int start_byte, int num_bytes);
@@ -70,10 +70,11 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
+//	read("sample2.txt", 1, 100);
 	//write("sample3.txt", 'c', 0, 200);
 
 	shutdown_globals();
-
+	
 /*
 	inode * s = new inode("sample.txt", 128);
 
@@ -175,7 +176,7 @@ void *read_file(void *arg){
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
 			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
-			//read(ssfs_file,start_byte,num_bytes);
+			read(ssfs_file,start_byte,num_bytes);
 		}else if(command == "LIST"){
 			list();
 		}else if(command == "SHUTDOWN"){
@@ -195,11 +196,9 @@ void *read_file(void *arg){
 }
 
 void disk_scheduler(){
-	while (num_threads){
-	puts("disk_scheduler!");
+	while (1){
 		pthread_mutex_lock(&mutex);
-		while(buffer[0] == 0 && num_threads){
-			printf("num_threads: %d\n", num_threads);
+		while(buffer[0] == 0)
 			pthread_cond_wait(&full, &mutex);
 		}
 		puts("disk_scheduler!!");
@@ -221,11 +220,16 @@ void disk_scheduler(){
 
 void read_request(int block){
 	pthread_mutex_lock(&mutex);
+	printf("%d\n", buffer[0]);
 	while(buffer[0] != 0)
 		pthread_cond_wait(&empty,&mutex);
+	global_buffer = "";
 	buffer[0] = 1;
 	buffer[1] = block;
 	pthread_cond_signal(&full);
+	while (global_buffer == "") {
+		pthread_cond_wait(&empty, &mutex);
+	}	
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -279,7 +283,7 @@ void build_inode_map() {
 	//seekg beginning + num_blocks + block_size many characters
 //	std::cout << "what: " << (block_size)*(3+(num_blocks/(block_size-1))) << std::endl;
 	disk.seekg(block_size*(2+(num_blocks/(block_size-1))), std::ios::beg);
-    int length = disk.tellg();
+    	int length = disk.tellg();
 
 //	std::cout << "disk length " << length << std::endl;
 	//getline(disk, line, '\n')
@@ -944,9 +948,26 @@ int write(std::string fname, char to_write, int start_byte, int num_bytes){
 }
 */
 
+void write_primitive(int block_number){
+	//open and seek to the block you want to write in disk
+	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
+	disk.seekp(std::ios_base::beg + (block_number-1)*block_size);
 
+	
+	//copy the global buffer into a local buffer for writing
+//	char buf[block_size-1];
+//	strcpy(buf, global_buffer.c_str());
+
+	//write to disk
+	disk.write(global_buffer.c_str(), block_size-1);
+	
+	//close disk
+	disk.close();
+}
 
 void read_primitive(int block_number) {
+	printf("Primitive: Block %d\n", block_number);
+
 	std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
 	disk.seekg(std::ios_base::beg + (block_number-1)*block_size);
 
@@ -961,17 +982,16 @@ void read_primitive(int block_number) {
 void read(std::string fname, int start_byte, int num_bytes){
 	//georege aint got no sauce
 
-	std::cout << " START: " << start_byte << " NUM: " << num_bytes << std::endl; 
+	printf("START: %d, NUM: %d\n", start_byte, num_bytes);
 
 	inode readme = inode_map[fname];
 	int current_size = readme.file_size;
 
 	if(current_size < start_byte){
-		std::cout << "Start byte is out of range for read on " << readme.file_name << std::endl;
+		printf("Start byte is out of range for read on %s\n", readme.file_name.c_str());
 
 	} else {
-		std::ifstream disk(disk_file_name, std::ios::in | std::ios::binary);
-
+		// replace me with primitive
 		std::string last = "";
 
 		if((start_byte + num_bytes-1) > current_size){
@@ -989,11 +1009,21 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 			int block = readme.direct_blocks[traverse];
 
+			printf("Requesting block %d\n", block);
+
+			read_request(block);
+
+			/*
 			disk.seekg((block-1)*block_size, std::ios::beg);
 			char line[block_size-1];
 			disk.read(line, block_size-1);
+			*/
 
-			std::string line_s = std::string(line);
+			std::string line_s = global_buffer;
+
+			printf("Traverse = %d\n", traverse);
+
+			printf("Line_s = %s\n", line_s.c_str());
 
 			int len = line_s.length();
 
@@ -1011,11 +1041,16 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 		while (traverse >= 12 and traverse < (12+(block_size/4)) and num_bytes > 0) {
 			int id_block = readme.indirect_block;
-
+/*
 			disk.seekg((id_block-1)*(block_size), std::ios::beg);
 
 			std::string line;
 			getline(disk, line, '\n');
+*/
+
+			read_request(id_block);
+
+			std::string line = global_buffer;
 
 			int mini_traverse = traverse - 12;
 
@@ -1027,11 +1062,15 @@ line = line.substr(0, line.find(' '));
 
 			int direct = b60_to_decimal(line.c_str());
 
+/*
 			disk.seekg((direct-1)*block_size, std::ios::beg);
 			char line2[block_size-1];
 			disk.read(line2, block_size-1);
+*/
 
-			std::string line_s = std::string(line2);
+			read_request(direct);
+
+			std::string line_s = global_buffer;
 
 			int len = line_s.length();
 
@@ -1053,10 +1092,15 @@ line = line.substr(0, line.find(' '));
 		while (traverse >= (12+(block_size/4)) and traverse < (12 + (block_size/4) + (block_size/4)*(block_size/4)) and num_bytes > 0) {
 			int did_block = readme.double_indirect_block;
 
-			disk.seekg((did_block-1)*(block_size), std::ios::beg);
+			/*disk.seekg((did_block-1)*(block_size), std::ios::beg);
 
 			std::string line;
 			getline(disk, line, '\n');
+			*/
+
+			read_request(did_block);
+
+			std::string line = global_buffer;
 
 			int id_block_index = (macro_traverse / (block_size/4));
 
@@ -1068,10 +1112,14 @@ line = line.substr(0, line.find(' '));
 			line = line.substr(0, line.find(' '));
 
 			int id_block = b60_to_decimal(line.c_str());
-
+			/*
 			disk.seekg((id_block-1)*(block_size), std::ios::beg);
 
 			getline(disk, line, '\n');
+			*/
+
+			read_request(id_block);
+			line = global_buffer;
 
 			int direct_block_index = macro_traverse % (block_size/4);
 
@@ -1082,11 +1130,14 @@ line = line.substr(0, line.find(' '));
 
 			int direct = b60_to_decimal(line.substr(0, line.find(' ')).c_str());
 
-			disk.seekg((direct-1)*block_size, std::ios::beg);
+			/*disk.seekg((direct-1)*block_size, std::ios::beg);
 			char line2[block_size-1];
 			disk.read(line2, block_size-1);
+			*/
 
-			std::string line_s = std::string(line2);
+			read_request(direct);
+
+			std::string line_s = global_buffer;
 
 			int len = line_s.length();
 
@@ -1103,8 +1154,7 @@ line = line.substr(0, line.find(' '));
 
 		}
 
-		std::cout << last << std::endl;
-
+		printf("%s\n", last.c_str());
 	}
 }
 
