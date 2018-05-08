@@ -1539,34 +1539,21 @@ std::string decimal_to_b60(int target) {
 
 int atCapacity(int lineNum,int flag){
 	if(flag == 0){
-		int capCount = 0;
-		int capacity = block_size / sizeof(int);
-		ifstream diskFile;
-		diskFile.open(disk_file_name);
-		int pos = std::ios_base::beg + ((lineNum -1) * block_size);
-		diskFile.seekg(pos);
 		std::string ibLine;
-		getline(diskFile,ibLine,'\n');
+		ibLine = read_request(lineNum);
 		const char * empty = decimal_to_b60(0).c_str();
 		std::size_t found = ibLine.find(empty,0);
 		if(found != std::string::npos){
-			diskFile.close();
 			return(0);
 		}else{
-			diskFile.close();
 			return(1);
 		}
 	}else if(flag == 1){
-		ifstream diskFile;
-		diskFile.open(disk_file_name);
-		int pos = std::ios_base::beg + ((lineNum -1) * block_size);
-		diskFile.seekg(pos);
 		std::string ibLine;
-		getline(diskFile,ibLine,'\n');
+		ibLine = read_request(lineNum);
 		const char * empty = decimal_to_b60(0).c_str();
 		std::size_t found = ibLine.find(empty,0);
 		if(found != std::string::npos){
-			diskFile.close();
 			return(0);
 		}else{
 			int lastidblock;
@@ -1577,9 +1564,9 @@ int atCapacity(int lineNum,int flag){
 				lastidblock = b60_to_decimal(p);
 				p = strtok(NULL," ");
 			}
-			diskFile.close();
-			atCapacity(lineNum,lastidblock);
 			delete [] target;
+			atCapacity(lineNum,lastidblock);
+
 		}
 	}
 }
