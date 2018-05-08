@@ -389,18 +389,7 @@ void split_write(std::string fname, char to_write, int start_byte, int num_bytes
 }
 
 void deleteFile(std::string fileName){
-	//create empty block to be written over indirect/double indirect
 
-	//How it works with producer consumer
-	//set global string = blocksize x \0 (Below block should do it)
-	/*	char * toWrite = new char[block_size];
-		for(int i = 0;i<(block_size);i++){
-			toWrite[i] = '\0';
-		}
-		*/
-	//call 2 block num
-	//buffer = (2,inode_map[fileName].location-1)
-	//Should only have to write to inode location, purely for fabrication of inode map.
 	//empty direct
 	int directsum = 0;
 	if(inode_map.count(fileName)==0){
@@ -501,23 +490,25 @@ void deleteFile(std::string fileName){
 		}
 
 	}
-	char * toWrite = new char[block_size];
-	for(int i = 0;i<(block_size-1);i++){
-		//toWrite[i] = '\0';
-		toWrite[i] = '\0';
-	}
-	toWrite[block_size-1]='\n'; //create blank line
+ //create blank line
 	//cout << "free_block_list[" << inode_map[fileName].location <<"] = " << free_block_list[inode_map[fileName].location];
 	free_block_list[inode_map[fileName].location - 1] = '0';
 
 	std::ofstream writeFile(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 	int local = (inode_map[fileName].location-1) * (block_size);
-	writeFile.seekp(std::ios::beg+local);
-	writeFile.write(toWrite,block_size*sizeof(char));
-	writeFile.close();
+	//create empty block to be written over indirect/double indirect
+
+	//How it works with producer consumer
+	//set global string = blocksize x \0 (Below block should do it)
+	char * toWrite = new char[block_size];
+	for(int i = 0;i<(block_size);i++){
+		toWrite[i] = '\0';
+	}
+	global_buffer = toWrite;
+	buffer[0] = 2;
+	buffer[1] = local;
 	inode_map.erase(fileName);
 	delete [] toWrite;
-	delete [] zeroed;
 	return;
 }
 
@@ -1145,7 +1136,7 @@ int createFile(std::string fileName){
 void import(std::string ssfs_file, std::string unix_file){
 	//Producer/Consumer:
 	//Global buffer = getline from unix
-	//signal scheduler with 2, first/next block of file 
+	//signal scheduler with 2, first/next block of file
 	std::ifstream unix_fstream (unix_file, std::ifstream::binary);
 	if(!unix_fstream) perror(unix_file.c_str());
 
