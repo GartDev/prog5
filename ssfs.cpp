@@ -1248,7 +1248,7 @@ void ssfsCat(std::string fileName){
 	if(inode_map.count(fileName) != 0){
 		read(fileName,1,inode_map[fileName].file_size);
 	}else{
-		std::cout << fileName << ": No such file" << std::endl;
+		printf("%s : No such file \n", fileName);
 	}
 }
 
