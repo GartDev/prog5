@@ -1550,6 +1550,8 @@ void import(std::string ssfs_file, std::string unix_file){
 	unix_fstream.seekg(0,unix_fstream.end);
 	int unix_bytesize = unix_fstream.tellg();
 	unix_fstream.seekg(0,unix_fstream.beg);
+	std::string local_buffer;
+	unix_fstream.read(local_buffer,(block_size-1))
 
 	int start = (2+(num_blocks/(block_size-1)+256));
 	int blocks_left = 0;
@@ -1560,7 +1562,7 @@ void import(std::string ssfs_file, std::string unix_file){
 	}
 
 	if(unix_bytesize > (blocks_left*block_size)){
-		std::cerr << unix_file << ": File is too large" << std::endl;
+		printf("%s: File is too large\n",unix_file.c_str());
 		return;
 	}
 
@@ -1568,16 +1570,6 @@ void import(std::string ssfs_file, std::string unix_file){
 	//if the file doesn't exist, create it
 		createFile(ssfs_file);
 	}
-
-	char ch;
-	int curr_byte = 1;
-	//std::cout << "begin import" << std::endl;
-	while(unix_fstream >> noskipws >> ch){
-		//std::cout << ch;
-		write(ssfs_file,ch,curr_byte,1);
-		curr_byte++;
-	}
-	//std::cout << std::endl;
 
 }
 
