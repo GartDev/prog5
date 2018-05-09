@@ -211,9 +211,7 @@ void disk_scheduler(){
 			global_buffer = "";
 		}else if(buffer[0] == 3){
 			//shutdown
-			puts("HEY LOL");
 			shutdown_globals();
-			puts("HEY");
 			delete [] producers;
 			pthread_exit(NULL);
 		}
@@ -238,6 +236,7 @@ std::string read_request(int block){
 	}	
 	std::string return_string = global_buffer;
 	pthread_mutex_unlock(&mutex);
+	return return_string;
 }
 
 void write_request(std::string out_string, int block){
@@ -565,21 +564,31 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
-	if (start_byte > writ.file_size) {
-		std::cout << "Start byte is out of range for write on " << file_name << std::endl;
+	if (start_byte > writ.file_size+1) {
+		printf("Start byte is out of range for write on %s\n", file_name.c_str());
 		return 0;
 	}
 
+	int blocks_needed = 0;
+
+	if (start_byte == 0) {
+		start_byte = 1;
+	}
+
+	start_byte -= 1;
+
 	if (writ.file_size < (start_byte + num_bytes)) {
 		int bytes_needed = (start_byte + num_bytes) - writ.file_size;
-		int blocks_needed = ceil((float) bytes_needed / (block_size-1));
+		blocks_needed = ceil((float) bytes_needed / (block_size-1));
 
 		std::vector<int> blocks_to_add;
+		std::vector<int> bta_direct;
 
 		int j;
 		for (j = 0 ; j < 12 ; j++) {
 			if (blocks_to_add.size() == blocks_needed) {
-				break; }
+				break;
+			}
 
 			if (writ.direct_blocks[j] == 0) {
 				int k;
@@ -587,6 +596,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 					if (free_block_list[k] == '0') {
 						free_block_list[k] = '1';
 						blocks_to_add.push_back(k+1);
+						bta_direct.push_back(k+1);
 						break;
 					}
 				}
@@ -609,8 +619,8 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 					if (free_block_list[k] == '0') {
 						free_block_list[k] = '1';
-						std::cout << "Chose block " << k+1 << " for the idb " << free_block_list[k] << std::endl;
 						writ.indirect_block = k+1;
+						inode_map[file_name].indirect_block = k+1;
 
 						disk.seekp(std::ios_base::beg + k*(block_size));
 
@@ -631,12 +641,12 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 							for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
 								if (free_block_list[k] == '0') {
 									free_block_list[k] = '1';
-									std::cout << "Chose block " << k+1 << " for the direct block" << std::endl;
 									blocks_to_add.push_back(k+1);
 
 									disk.seekp(std::ios_base::beg + save*block_size + 4*successes);
 
 									std::string k1 = decimal_to_b60(k+1);
+									std::cout << "Adding " << k1.c_str() << " to the IDB" << std::endl;
 									disk.write(k1.c_str(), 3*sizeof(char));
 
 									successes++;
@@ -731,6 +741,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 					if (free_block_list[k] == '0') {
 						free_block_list[k] = '1';
 						writ.double_indirect_block = k+1;
+						inode_map[file_name].double_indirect_block = k+1;
 
 						disk.seekp(std::ios_base::beg + (k)*(block_size));
 
@@ -814,7 +825,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 		}
 		if (blocks_to_add.size() != blocks_needed) {
-			std::cout << "There aren't enough blocks left to hold a file that big" << std::endl;
+			puts("There aren't enough blocks left to hold a file that big\n");
 
 			int i;
 			for (i = 0 ; i < blocks_to_add.size() ; i++) {
@@ -825,7 +836,23 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 		} else {
 			int i;
 			for (i = 0 ; i < blocks_to_add.size() ; i++) {
-				std::cout << blocks_to_add[i] << std::endl;
+			//	std::cout << blocks_to_add[i] << std::endl;
+			}
+
+			int start = bta_direct.size();
+
+			for (i = 0 ; i < writ.direct_blocks.size() ; i++) {
+				if (writ.direct_blocks[i] == 0) {
+					start = i;
+					break;
+				}
+			}
+
+			int size = bta_direct.size();
+
+			for (i = start ; i < std::min((start + size), 12) ; i++) {
+				writ.direct_blocks[i] = bta_direct[i-start];
+				inode_map[file_name].direct_blocks[i] = bta_direct[i-start];
 			}
 		}
 
@@ -834,14 +861,160 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 		// no need to allocate just write
 	}
 
+/*
 	int starting_block = start_byte / (block_size-1);
 	int offset = start_byte % (block_size-1);
 
-	std::string to_write = "\0" * (offset-1);
+	if (offset == 0 or offset == 1) {
+		std::string local_buffer = "";
+	} else {
+		std::string local_buffer = read_request(starting_block);
+	}
 
+	int it;
+
+	std::string current_block = read_request(starting_block);
+
+
+	for (it = offset ; it < block_size ; it++) {
+		local_buffer += to_write;
+	}	
+
+	write_request(local_buffer, inode_map[file_name].direct_blocks[starting_block]);
+	offset = 0;
+
+	inode_map[file_name].file_size += bytes_needed;
+*/
+	int traverse = start_byte / (block_size-1);
+
+	int macro_traverse = 0;
+	int check = 0;
+
+	while (traverse < 12 and num_bytes > 0) {
+
+		int block = inode_map[file_name].direct_blocks[traverse];
+
+		std::string local_buffer;
+
+		if (start_byte%(block_size-1) == 0) {
+			local_buffer = "";
+		} else {
+			local_buffer = read_request(block).substr(0, start_byte%(block_size-1));
+		}
+
+		int it;
+		for (it = (start_byte%(block_size-1)) ; it < std::min(num_bytes+(start_byte % (block_size-1)), block_size-1) ; it++) {
+			local_buffer += to_write;
+		}
+
+		write_request(local_buffer, block);
+
+		num_bytes -= std::min(num_bytes, block_size-1 - (start_byte%(block_size-1)));
+
+		traverse += 1;
+		start_byte = 0;
+
+	}
+
+	while (traverse >= 12 and traverse < (12+(block_size/4)) and num_bytes > 0) {
+		int id_block = inode_map[file_name].indirect_block;
+
+		std::string line = read_request(id_block);
+
+		std::cout << "Line is " << line << std::endl;
+
+		int mini_traverse = traverse - 12;
+
+		while (mini_traverse > 0) {
+			line = line.substr(line.find(' ')+1, line.length());
+			mini_traverse -= 1;
+		}
+
+		line = line.substr(0, line.find(' '));
+
+		std::cout << "Val is " << line << std::endl;
+
+		int direct = b60_to_decimal(line.c_str());
+
+		std::string local_buffer;
+
+		if (start_byte%(block_size-1) == 0) {
+			local_buffer = "";
+		} else {
+			local_buffer = read_request(direct).substr(0, start_byte%(block_size-1));
+		}
+
+		int it;
+
+		for (it = (start_byte%(block_size-1)) ; it < std::min(num_bytes+(start_byte % (block_size-1)), block_size-1) ; it++) {
+			local_buffer += to_write;
+		}
+
+		write_request(local_buffer, direct);
+
+		num_bytes -= std::min(num_bytes, block_size-1 - (start_byte%(block_size-1)));
+
+		start_byte = 0;
+		traverse += 1;
+
+	}
+
+	macro_traverse = traverse - (12 + (block_size/4));
+
+	while (traverse >= (12+(block_size/4)) and traverse < (12 + (block_size/4) + (block_size/4)*(block_size/4)) and num_bytes > 0) {
+		int did_block = inode_map[file_name].double_indirect_block;
+
+		std::string line = read_request(did_block);
+
+
+		int id_block_index = (macro_traverse / (block_size/4));
+
+		while (id_block_index > 0) {
+			line = line.substr(line.find(' ')+1, line.length());
+			id_block_index--;
+		}
+
+		line = line.substr(0, line.find(' '));
+
+		int id_block = b60_to_decimal(line.c_str());
+
+		line = read_request(id_block);
+
+		int direct_block_index = macro_traverse % (block_size/4);
+
+		while (direct_block_index > 0) {
+			line = line.substr(line.find(' ')+1, line.length());
+			direct_block_index--;
+		}
+
+		int direct = b60_to_decimal(line.substr(0, line.find(' ')).c_str());
+
+		std::string local_buffer;
+
+		if (start_byte%(block_size-1) == 0) {
+			local_buffer = "";
+		} else {
+			local_buffer = read_request(direct).substr(0, start_byte%(block_size-1));
+		}
+
+		int it;
+		for (it = (start_byte%(block_size-1)) ; it < std::min(num_bytes+(start_byte % (block_size-1)), block_size-1) ; it++) {
+			local_buffer += to_write;
+		}
+
+		write_request(local_buffer, direct);
+
+		num_bytes -= std::min(num_bytes, block_size-1 - (start_byte%(block_size-1)));
+
+		start_byte = 0;
+		traverse += 1;
+		macro_traverse += 1;
+
+	}
+
+	inode_map[file_name].file_size += blocks_needed * (block_size-1);
 
 	return 0;
-
 }
 
 
@@ -986,7 +1159,9 @@ void write_primitive(int block_number){
 //	strcpy(buf, global_buffer.c_str());
 
 	//write to disk
-	disk.write(global_buffer.c_str(), block_size-1);
+
+	std::cout << "GB length " << global_buffer.length() << std::endl;
+	disk.write(global_buffer.c_str(), global_buffer.length());
 	
 	//close disk
 	disk.close();
