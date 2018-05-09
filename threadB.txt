@@ -1,3 +1,3 @@
-IMPORT GEORGE georgelopez.txt
+IMPORT GEORGE xl_import.txt
 CAT GEORGE
 DELETE GEORGE
