@@ -1,1 +1,1 @@
-WRITE sample3.txt 0 0 2776
+WRITE sample3.txt c 4900 500
