@@ -150,7 +150,7 @@ void *read_file(void *arg){
 			std::string unix_file;
 			line_stream >> unix_file;
 			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
-			//import(ssfs_file,unix_file);
+			import(ssfs_file,unix_file);
 		}else if(command == "CAT"){
 			line_stream >> ssfs_file;
 			std::cout << "Contents of " << ssfs_file << std::endl;
@@ -542,7 +542,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 	if(inode_map.count(file_name) == 0){
 		//std::cout << file_name << ": No such file" << std::endl;
 		createFile(file_name);
-		return 0;
 	}
 
 	inode writ = inode_map[file_name];
@@ -1414,7 +1413,6 @@ void import(std::string ssfs_file, std::string unix_file){
 
 void ssfsCat(std::string fileName){
 	if(inode_map.count(fileName) != 0){
-		printf("SIZE %d\n",inode_map[fileName].file_size);
 		read(fileName,1,inode_map[fileName].file_size);
 	}else{
 		printf("%s : No such file \n", fileName.c_str());
