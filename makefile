@@ -25,3 +25,6 @@ clean :
 run: ssfs ssfs_mkdsk
 	./ssfs_mkdsk 1024 128 DISK
 	./ssfs DISK thread1.txt thread2.txt thread3.txt thread4.txt
+
+diskfile: ssfs ssfs_mkdsk
+	./ssfs_mkdsk 1024 128 DISK
