@@ -435,35 +435,54 @@ void deleteFile(std::string fileName){
 			if(atCapacity(inode_map[fileName].indirect_block,0) == 1){
 				if(inode_map[fileName].double_indirect_block != 0){
 					int lineNum = inode_map[fileName].double_indirect_block;
-					std::string dibLine;
-					dibLine = read_request(lineNum);
 					int idremoveblock;
+					std::string dibLine  = read_request(lineNum);
 					char * target = new char [dibLine.length()+1];
 		  			strcpy (target, dibLine.c_str()); //copy line of doubleindirect into target
-					const char * p = strtok(target," ");
-					while(p!=decimal_to_b60(0)){ //for each number in double indirect //p = value
-						idremoveblock = b60_to_decimal(p); //convert indirect block# inside double indirect to decimal put in idremoveblock
-						int id_linenum = idremoveblock; //Number of each indirect_block in double
+					const char * indirblock = strtok(target," ");
+					while(indirblock!=decimal_to_b60(0)){ //for each number in double indirect //p = value
+						idremoveblock = b60_to_decimal(indirblock); //convert indirect block# inside double indirect to decimal put in idremoveblock
+						int dblock;//Number of each indirect_block in double
 						std::string ibLine;
-						ibLine = read_request(id_linenum);
-						int dblock;
-						char * idtarget = new char [ibLine.length()+1]; //string of direct blocks inside indirect block
+						ibLine = read_request(idremoveblock);
+						char * idtarget = new char[ibLine.length()+1]; //string of direct blocks inside indirect block
 			  			strcpy (idtarget, ibLine.c_str());
-						const char * q = strtok(idtarget," "); //tokens of each of those
-						while(q!=decimal_to_b60(0).c_str()){//for each numbre in indirect
-							dblock = b60_to_decimal(q);
+						const char * dirblock= strtok(idtarget," "); //tokens of each of those
+						//SEGFAULT: seg fault is doing this inner while 32 times then segfaulting
+						while(dirblock!=decimal_to_b60(0)){//for each numbre in indirect
+							dblock = b60_to_decimal(dirblock);
 							pthread_mutex_lock(&free_mutex);
 							free_block_list[dblock-1] = '0'; //free direct blocks
 							pthread_mutex_unlock(&free_mutex);
-							q = strtok(NULL," ");
+							dirblock = strtok(NULL," ");
 						}
 						pthread_mutex_lock(&free_mutex);
 						free_block_list[idremoveblock-1] = '0';
 						pthread_mutex_unlock(&free_mutex);
-						p = strtok(NULL," ");
+						indirblock = strtok(NULL," ");
 						delete [] idtarget;
 					}
 					delete [] target;
+					pthread_mutex_lock(&free_mutex);
+					free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
+					pthread_mutex_unlock(&free_mutex);
+					int indirect_block_num = inode_map[fileName].indirect_block;
+					int dblock;
+					std::string indirect_line = read_request(indirect_block_num);
+					char * id_line = new char[indirect_line.length()+1];
+					strcpy (id_line, indirect_line.c_str());
+					const char * blocknum = strtok(id_line," ");
+					while(blocknum!=decimal_to_b60(0)){
+						dblock = b60_to_decimal(blocknum);
+						pthread_mutex_lock(&free_mutex);
+						free_block_list[dblock-1] = '0';
+						pthread_mutex_unlock(&free_mutex);
+						blocknum = strtok(NULL," ");
+					}
+					pthread_mutex_lock(&free_mutex);
+					free_block_list[inode_map[fileName].indirect_block-1] = '0';
+					pthread_mutex_unlock(&free_mutex);
+					delete [] id_line;
 				}else{
 					pthread_mutex_lock(&free_mutex);
 					free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
@@ -832,7 +851,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 					did_line = read_request(did_block);
 					for (ctr = ctr ; ctr > 0 ; ctr--) {
-						did_line = did_line.substr(did_line.find(' ')+1);	
+						did_line = did_line.substr(did_line.find(' ')+1);
 					}
 
 					did_line = did_line.substr(0, did_line.find(' '));
@@ -855,7 +874,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 					std::string line = read_request(id_line_num);
 
 					if (line.substr(block_size-4, block_size-1) == "000") {
-				
+
 						int ctr = 0;
 						while (line != "000" and line.substr(0, line.find(' ')) != "000") {
 							line = line.substr(line.find(' ')+1, line.length());
@@ -955,7 +974,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						if (free_block_list[m] == '0') {
 							free_block_list[m] = '1';
 
-							
+
 
 							std::string ddb = read_request(did_block);
 
@@ -1012,10 +1031,10 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 					}
 
 
-					
+
 					george_lopez++;
 					ctr_lopez = george_lopez;
-				}				
+				}
 			}
 		}
 		if (blocks_to_add.size() != blocks_needed) {
