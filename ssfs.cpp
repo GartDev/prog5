@@ -210,9 +210,8 @@ void disk_scheduler(){
 			global_buffer = "";
 		}else if(buffer[0] == 3){
 			//shutdown
-			puts("HEY LOL");
 			shutdown_globals();
-			puts("HEY");
+			//puts("HEY");
 			delete [] producers;
 			pthread_exit(NULL);
 		}
