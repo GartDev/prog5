@@ -431,77 +431,81 @@ void deleteFile(std::string fileName){
 		}
 	}
 	if(directsum == 12){ //if direct_blocks are full
-		if(atCapacity(inode_map[fileName].indirect_block,0) == 1){
-			int lineNum = inode_map[fileName].double_indirect_block;
-			std::string dibLine;
-			dibLine = read_request(lineNum);
-			int idremoveblock;
-			char * target = new char [dibLine.length()];
-  			strcpy (target, dibLine.c_str()); //copy line of doubleindirect into target
-			const char * p = strtok(target," ");
-			while(p!=NULL){ //for each number in double indirect
-				p = strtok(NULL," "); //p = value
-				idremoveblock = b60_to_decimal(p); //convert indirect block# inside double indirect to decimal put in idremoveblock
-				int id_linenum = idremoveblock; //Number of each indirect_block in double
-				std::string ibLine;
-				ibLine = read_request(id_linenum);
-				int dblock;
-				char * idtarget = new char [ibLine.length()]; //string of direct blocks inside indirect block
-	  			strcpy (idtarget, ibLine.c_str());
-				const char * q = strtok(idtarget," "); //tokens of each of those
-				while(q!=NULL){//for each numbre in indirect
-					q = strtok(NULL," ");
-					dblock = b60_to_decimal(q);
+		if(inode_map[fileName].indirect_block != 0){
+			if(atCapacity(inode_map[fileName].indirect_block,0) == 1){
+				if(inode_map[fileName].double_indirect_block != 0){
+					int lineNum = inode_map[fileName].double_indirect_block;
+					std::string dibLine;
+					dibLine = read_request(lineNum);
+					int idremoveblock;
+					char * target = new char [dibLine.length()];
+		  			strcpy (target, dibLine.c_str()); //copy line of doubleindirect into target
+					const char * p = strtok(target," ");
+					while(p!=NULL){ //for each number in double indirect
+						p = strtok(NULL," "); //p = value
+						idremoveblock = b60_to_decimal(p); //convert indirect block# inside double indirect to decimal put in idremoveblock
+						int id_linenum = idremoveblock; //Number of each indirect_block in double
+						std::string ibLine;
+						ibLine = read_request(id_linenum);
+						int dblock;
+						char * idtarget = new char [ibLine.length()]; //string of direct blocks inside indirect block
+			  			strcpy (idtarget, ibLine.c_str());
+						const char * q = strtok(idtarget," "); //tokens of each of those
+						while(q!=NULL){//for each numbre in indirect
+							q = strtok(NULL," ");
+							dblock = b60_to_decimal(q);
+							pthread_mutex_lock(&free_mutex);
+							free_block_list[dblock-1] = '0'; //free direct blocks
+							pthread_mutex_unlock(&free_mutex);
+						}
+						pthread_mutex_lock(&free_mutex);
+						free_block_list[idremoveblock-1] = '0';
+						pthread_mutex_unlock(&free_mutex);
+						delete [] idtarget;
+					}
 					pthread_mutex_lock(&free_mutex);
-					free_block_list[dblock-1] = '0'; //free direct blocks
+					free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
+					pthread_mutex_unlock(&free_mutex);
+					int indirect_block_num = inode_map[fileName].indirect_block;
+					int dblock;
+					std::string indirect_line = read_request(indirect_block_num);
+					char * id_line = new char[indirect_line.length()];
+					strcpy (id_line, indirect_line.c_str());
+					const char * blocknum = strtok(id_line," ");
+					while(blocknum!=NULL){
+						blocknum = strtok(NULL," ");
+						dblock = b60_to_decimal(blocknum);
+						pthread_mutex_lock(&free_mutex);
+						free_block_list[dblock-1] = '0';
+						pthread_mutex_unlock(&free_mutex);
+					}
+					pthread_mutex_lock(&free_mutex);
+					free_block_list[inode_map[fileName].indirect_block-1] = '0';
+					pthread_mutex_unlock(&free_mutex);
+					delete [] id_line;
+					delete [] target;
+				}
+			}else{ //if indirect_block isnt full
+				int indirect_block_num = inode_map[fileName].indirect_block;
+				int indirect_pos = ((indirect_block_num));
+				int dblock;
+				std::string indirect_line;
+				indirect_line = read_request(indirect_pos);
+				char * id_line = new char[indirect_line.length()];
+				strcpy (id_line, indirect_line.c_str());
+				const char * blocknum = strtok(id_line," ");
+				while(blocknum!=NULL){
+					blocknum = strtok(NULL," ");
+					dblock = b60_to_decimal(blocknum);
+					pthread_mutex_lock(&free_mutex);
+					free_block_list[dblock-1] = '0';
 					pthread_mutex_unlock(&free_mutex);
 				}
 				pthread_mutex_lock(&free_mutex);
-				free_block_list[idremoveblock-1] = '0';
+				free_block_list[inode_map[fileName].indirect_block-1] = '0';
 				pthread_mutex_unlock(&free_mutex);
-				delete [] idtarget;
+				delete [] id_line;
 			}
-			pthread_mutex_lock(&free_mutex);
-			free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
-			pthread_mutex_unlock(&free_mutex);
-			int indirect_block_num = inode_map[fileName].indirect_block;
-			int dblock;
-			std::string indirect_line = read_request(indirect_block_num);
-			char * id_line = new char[indirect_line.length()];
-			strcpy (id_line, indirect_line.c_str());
-			const char * blocknum = strtok(id_line," ");
-			while(blocknum!=NULL){
-				blocknum = strtok(NULL," ");
-				dblock = b60_to_decimal(blocknum);
-				pthread_mutex_lock(&free_mutex);
-				free_block_list[dblock-1] = '0';
-				pthread_mutex_unlock(&free_mutex);
-			}
-			pthread_mutex_lock(&free_mutex);
-			free_block_list[inode_map[fileName].indirect_block-1] = '0';
-			pthread_mutex_unlock(&free_mutex);
-			delete [] id_line;
-			delete [] target;
-		}else{ //if indirect_block isnt full
-			int indirect_block_num = inode_map[fileName].indirect_block;
-			int indirect_pos = ((indirect_block_num));
-			int dblock;
-			std::string indirect_line;
-			indirect_line = read_request(indirect_pos);
-			char * id_line = new char[indirect_line.length()];
-			strcpy (id_line, indirect_line.c_str());
-			const char * blocknum = strtok(id_line," ");
-			while(blocknum!=NULL){
-				blocknum = strtok(NULL," ");
-				dblock = b60_to_decimal(blocknum);
-				pthread_mutex_lock(&free_mutex);
-				free_block_list[dblock-1] = '0';
-				pthread_mutex_unlock(&free_mutex);
-			}
-			pthread_mutex_lock(&free_mutex);
-			free_block_list[inode_map[fileName].indirect_block-1] = '0';
-			pthread_mutex_unlock(&free_mutex);
-			delete [] id_line;
 		}
 	}//Final inode deletion
 	pthread_mutex_lock(&free_mutex);
@@ -858,7 +862,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 	for (it = offset ; it < block_size ; it++) {
 		local_buffer += to_write;
-	}	
+	}
 
 	write_request(local_buffer, inode_map[file_name].direct_blocks[starting_block]);
 	offset = 0;
