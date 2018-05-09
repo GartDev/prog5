@@ -390,30 +390,6 @@ void build_free_block_list() {
 	disk.close();
 }
 
-// Disk Ops below ------------------------
-
-void split_write(std::string fname, char to_write, int start_byte, int num_bytes){
-	/*
-	//I'm assuming that there is a global buffer somewhere I can write into
-	std::string better_char = "G";
-	better_char.front() = to_write;
-	if(num_bytes > block_size){
-		int extra = num_bytes%block_size;
-	       	int easy_bytes = num_bytes - extra;
-		int i;
-		int j;
-
-		for(i = 0; i < easy_bytes/block_size; i++){
-			write_request piece = write_request(fname, start_byte, block_size-1);
-			for(j = 0; j < (block_size-1); j++){
-				piece.to_write.append(better_char);
-			}
-			//send request to buffer in scheduler
-		}
-	}
-*/
-}
-
 void deleteFile(std::string fileName){
 	int directsum = 0;
 	if(inode_map.count(fileName)==0){
@@ -1610,7 +1586,8 @@ inode_map["sample2.txt"] = sample2;
 		seek += it.second.file_name.length()*sizeof(char) + sizeof(char);
 
 		char h[5];
-		sprintf(h, "%x", it.second.location);
+		int write_location = distance(inode_map.begin(),inode_map.find(it.second.file_name))+(3+(num_blocks/(block_size-1)));
+		sprintf(h, "%x", write_location);
 
 		disk.write(h, std::string(h).length()*sizeof(char));
 		disk.write(":", sizeof(char));
