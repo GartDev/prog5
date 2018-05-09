@@ -1202,137 +1202,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 	return 0;
 }
 
-
-/*
-int write(std::string fname, char to_write, int start_byte, int num_bytes){
-	inode target = inode_map[fname];
-	int control = 0;
-	//check file size, return error if start_byte is out of bounds
-	int current_size = target.file_size;
-	if(current_size < start_byte){
-		std::cout << "Start byte is out of range" << std::endl;
-	}
-	//check if file needs to be extended
-	else if(current_size < (start_byte + num_bytes)){
-		if(sizeof(free_block_list) == 0){
-			return 1;
-		}
-		else{
-			//expand file
-			std::cout << "add_blocks() ain't work yet sorry" << std::endl;
-			return 1;
-		}
-	}
-	else{
-		std::ofstream disk(disk_file_name, std::ofstream::out);
-
-		int num_blocks = num_bytes / (block_size-1);
-		int start_block = start_byte/ (block_size-1);
-		int block = target.direct_blocks[start_block];
-		int traverse = start_byte / (block_size-1);
-
-		disk.seekp((block-1)*(block_size) + (start_byte%(block_size-1)), std::ios::beg);
-		int written;
-		int loops = 0;
-
-		while(start_block < 12 && num_bytes > 0) {
-
-			block = target.direct_blocks[start_block];
-			if(loops != 0){
-			disk.seekp((block-1)*(block_size), std::ios::beg);
-			}
-			written = 0;
-
-
-
-			while((start_byte + written) < (block_size-1) ){
-				disk.put(to_write);
-				written++;
-				num_bytes--;
-				if(num_bytes == 0){break;}
-				written++;
-			}
-			start_block++;
-			loops++;
-			traverse++;
-
-		}
-		if(num_bytes > 0){
-			return 0;
-		}
-		else{
-			control = 1;
-		}
-		// now we need to read the indirect block to keep going
-		std::ifstream disk_in(disk_file_name, std::ios::in | std::ios::binary);
-		int id_block = target.indirect_block;
-		while(start_block >= 12 && start_block < (12+(block_size/4)) && num_bytes > 0) {
-
-
-			disk_in.seekg((id_block-1)*(block_size), std::ios::beg);
-
-			std::string line;
-			getline(disk_in, line, '\n');
-
-			int mini_traverse = traverse - 12;
-
-			while (mini_traverse > 0) {
-				line = line.substr(line.find(' ')+1, line.length());
-				mini_traverse -= 1;
-			}
-
-			line = line.substr(0, line.find(' '));
-
-			if (line == "000") {
-				disk_in.close();
-				disk.close();
-				std::cout << "Reached end of file while writing" << std::endl;
-				return 1;
-			}
-
-			int direct = b60_to_decimal(line.c_str());
-
-			disk.seekp((direct-1)*(block_size) + ((start_byte%(block_size-1))), std::ios::beg);
-
-			if(control == 0){
-				written = 0;
-
-
-
-				while((start_byte + written) < (block_size-1) ){
-					disk.put(to_write);
-					num_bytes--;
-					if(num_bytes == 0){break;}
-					written++;
-				}
-				start_block++;
-				loops++;
-				traverse++;
-
-			}
-			else{
-				int i;
-				for(i = 0; i < (block_size-1); i++){
-					disk.put(to_write);
-					num_bytes--;
-					if(num_bytes == 0){break;}
-					written++;
-				}
-				start_block++;
-				loops++;
-				traverse++;
-			}
-
-		}
-		if(num_bytes == 0){disk_in.close();disk.close();return 0;}
-	//	else if(){
-
-//		}
-	}
-	return 1;
-}
-*/
-
 void write_primitive(int block_number){
 	//open and seek to the block you want to write in disk
 	std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
@@ -1590,10 +1459,13 @@ int import(std::string file_name, std::string unix_file){
 		return 1;
 	}
 
-	int start_byte = 0;
+	int start_byte = 1;
 	unix_fstream.seekg(0,unix_fstream.end);
 	int num_bytes = unix_fstream.tellg();
 	unix_fstream.seekg(0,unix_fstream.beg);
+	std::string content( (std::istreambuf_iterator<char>(unix_fstream) ),
+                       (std::istreambuf_iterator<char>()    ) );
+	unix_fstream.close();
 
 	if(inode_map.count(file_name) == 0){
 		//std::cout << file_name << ": No such file" << std::endl;
@@ -1621,6 +1493,8 @@ int import(std::string file_name, std::string unix_file){
 		int bytes_needed = (start_byte + num_bytes) - writ.file_size;
 		blocks_needed = ceil((float) bytes_needed / (block_size-1));
 
+		int had_id = 1;
+		int had_did = 1;
 		std::vector<int> blocks_to_add;
 		std::vector<int> bta_direct;
 		std::vector<int> indirect_blocks;
@@ -1662,8 +1536,7 @@ int import(std::string file_name, std::string unix_file){
 						free_block_list[k] = '1';
 						writ.indirect_block = k+1;
 						inode_map[file_name].indirect_block = k+1;
-						indirect_blocks.push_back(k+1);
-
+						had_id = 0;
 
 						int save = k;
 
@@ -1948,41 +1821,6 @@ int import(std::string file_name, std::string unix_file){
 
 					did_line = did_line.substr(0, did_line.find(' '));
 
-/*
-					int ctr = 0;
-					while (line != "000" and line.substr(0, line.find(' ')) != "000") {
-						line = line.substr(line.find(' ')+1, line.length());
-						ctr++;
-						if (ctr == (block_size/4)) break;
-					}
-
-					int it;
-					for (it = 4*ctr ; it < (block_size) ; it += 4) {
-						if (blocks_to_add.size() == blocks_needed) {
-							break;
-						}
-
-						int k;
-						for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
-							if (free_block_list[k] == '0') {
-								free_block_list[k] = '1';
-								blocks_to_add.push_back(k+1);
-
-								std::string b = read_request(id_line_num);
-
-								std::string b1 = b.substr(0, it);
-								std::string b2 = b.substr(it+3, b.length());
-								std::string k1 = decimal_to_b60(k+1);
-
-								b = b1 + k1 + b2;
-								write_request(b, id_line_num);
-
-								ctr++;
-								break;
-							}
-						}
-					}
-*/
 					int m;
 					successes_lopez = george_lopez;
 					for (m = (2+(num_blocks/(block_size-1)+256)) ; m < num_blocks ; m++) {
@@ -2108,6 +1946,7 @@ int import(std::string file_name, std::string unix_file){
 	int macro_traverse = 0;
 	int check = 0;
 
+	int curr_byte = 0;
 	while (traverse < 12 and num_bytes > 0) {
 
 		int block = inode_map[file_name].direct_blocks[traverse];
@@ -2120,9 +1959,11 @@ int import(std::string file_name, std::string unix_file){
 			local_buffer = read_request(block).substr(0, start_byte%(block_size-1));
 		}
 
-		char *local_buffer_c_str = new char[block_size-1];
-		unix_fstream.read(local_buffer_c_str,std::min(num_bytes,block_size-1));
-		local_buffer = local_buffer_c_str;
+		int it;
+		for (it = (start_byte%(block_size-1)) ; it < std::min(num_bytes+(start_byte % (block_size-1)), block_size-1) ; it++) {
+			//printf("%d\n",(curr_byte+it));
+			local_buffer += content[curr_byte+it];
+		}
 
 		write_request(local_buffer, block);
 
@@ -2130,8 +1971,7 @@ int import(std::string file_name, std::string unix_file){
 
 		traverse += 1;
 		start_byte = 0;
-
-		delete [] local_buffer_c_str;
+		curr_byte += it;
 	}
 
 	while (traverse >= 12 and traverse < (12+(block_size/4)) and num_bytes > 0) {
@@ -2158,9 +1998,11 @@ int import(std::string file_name, std::string unix_file){
 			local_buffer = read_request(direct).substr(0, start_byte%(block_size-1));
 		}
 
-		char *local_buffer_c_str = new char[block_size-1];
-		unix_fstream.read(local_buffer_c_str,std::min(num_bytes,block_size-1));
-		local_buffer = local_buffer_c_str;
+		int it;
+
+		for (it = (start_byte%(block_size-1)) ; it < std::min(num_bytes+(start_byte % (block_size-1)), block_size-1) ; it++) {
+			local_buffer += content[curr_byte+it];
+		}
 
 		write_request(local_buffer, direct);
 
@@ -2168,8 +2010,7 @@ int import(std::string file_name, std::string unix_file){
 
 		start_byte = 0;
 		traverse += 1;
-
-		delete [] local_buffer_c_str;
+		curr_byte += it;
 	}
 
 	macro_traverse = traverse - (12 + (block_size/4));
@@ -2210,9 +2051,10 @@ int import(std::string file_name, std::string unix_file){
 			local_buffer = read_request(direct).substr(0, start_byte%(block_size-1));
 		}
 
-		char *local_buffer_c_str = new char[block_size-1];
-		unix_fstream.read(local_buffer_c_str,std::min(num_bytes,block_size-1));
-		local_buffer = local_buffer_c_str;
+		int it;
+		for (it = (start_byte%(block_size-1)) ; it < std::min(num_bytes+(start_byte % (block_size-1)), block_size-1) ; it++) {
+			local_buffer += content[curr_byte+it];
+		}
 
 		write_request(local_buffer, direct);
 
@@ -2221,17 +2063,13 @@ int import(std::string file_name, std::string unix_file){
 		start_byte = 0;
 		traverse += 1;
 		macro_traverse += 1;
-
-		delete [] local_buffer_c_str;
+		curr_byte += it;
 	}
 
 	inode_map[file_name].file_size += blocks_needed * (block_size-1);
 
-	unix_fstream.close();
 
 	return 0;
-
-
 }
 
 void ssfsCat(std::string fileName){
