@@ -627,7 +627,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						successes = 0;
 						int z;
 						for (z = blocks_to_add.size() ; z < std::min(blocks_needed, (block_size/4)+bta_size) ; z++) {
-							std::cout << z << std::endl;
 
 							int k;
 							for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
@@ -645,7 +644,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 									std::string k1 = decimal_to_b60(k+1);
 
 									b = b1 + k1 + b2;
-									std::cout << b << std::endl;
 									write_request(b, save+1);
 
 									successes++;
@@ -678,8 +676,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 	//				std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
 
-					std::cout << ctr << std::endl;
-
 					int it;
 					for (it = 4*ctr ; it < (block_size) ; it += 4) {
 						if (blocks_to_add.size() == blocks_needed) {
@@ -701,7 +697,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 								std::string k1 = decimal_to_b60(k+1);
 
 								b = b1 + k1 + b2;
-								std::cout << b << std::endl;
 								write_request(b, id_block);
 
 								ctr++;
@@ -732,17 +727,19 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						writ.double_indirect_block = k+1;
 						inode_map[file_name].double_indirect_block = k+1;
 
-						disk.seekp(std::ios_base::beg + (k)*(block_size));
-
 						int save_lopez = k;
+
+						std::string lb = "";
 
 						int l;
 						for (l = 0 ; l < (block_size/4) ; l++) {
-							disk.write("000", 3*sizeof(char));
+							lb += "000";
 							if (l+1 != (block_size/4)) {
-								disk.write(" ", sizeof(char));
+								lb += " ";
 							}
 						}
+
+						write_request(lb, k+1);
 
 						int m;
 						successes_lopez = 0;
@@ -755,63 +752,76 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 							if (free_block_list[m] == '0') {
 								free_block_list[m] = '1';
 
-								disk.seekp(std::ios_base::beg + save_lopez*block_size + successes_lopez*4);
+			//					disk.seekp(std::ios_base::beg + save_lopez*block_size + successes_lopez*4);
+
+
+								std::cout << "Chose " << m+1 << " for IDB inside of DIDB" << std::endl;
+
+								std::string ddb = read_request(save_lopez+1);
+
+								std::cout << "DDB BEFORE:" << std::endl;
+								std::cout << ddb << std::endl;
 
 								std::string k1 = decimal_to_b60(m+1);
-								disk.write(k1.c_str(), 3*sizeof(char));
+						//		disk.write(k1.c_str(), 3*sizeof(char));
 
-								disk.seekp(std::ios_base::beg + m*block_size);
+								std::string ddb1 = ddb.substr(0, 4*successes_lopez);
+								std::string ddb2 = ddb.substr(4*(successes_lopez+1)-1, ddb.length());
+
+								write_request(ddb1+k1+ddb2, save_lopez+1);
+
+								std::cout << "DDB AFTER:" << std::endl;
+								std::cout << ddb1 + k1 + ddb2 << std::endl;
+
+//								disk.seekp(std::ios_base::beg + m*block_size);
 								int save = m;
 
+								std::string lb = "";
 
 								int l;
 								for (l = 0 ; l < (block_size/4) ; l++) {
-									disk.write("000", 3*sizeof(char));
+									lb += "000";
 									if (l+1 != (block_size/4)) {
-										disk.write(" ", sizeof(char));
+										lb += " ";
 									}
 								}
 
+								write_request(lb, m+1);
+								int bta_size = blocks_to_add.size();
+								successes_lopez++;
+
 								successes = 0;
-								for (l = blocks_to_add.size() ; l < std::min(blocks_needed, (block_size/4)) ; l++) {
+								for (l = blocks_to_add.size() ; l < std::min(blocks_needed, bta_size+(block_size/4)) ; l++) {
 									int n;
 									for (n = (2+(num_blocks/(block_size-1)+256)) ; n < num_blocks ; n++) {
 										if (free_block_list[n] == '0') {
 											free_block_list[n] = '1';
 											blocks_to_add.push_back(n+1);
-											disk.seekp(std::ios_base::beg + save*block_size + 4*successes);
+
+											std::string b = read_request(save+1);
+
+											std::cout << b << std::endl;
+
+											std::string b1 = b.substr(0, 4*successes);
+											std::string b2 = b.substr(4*(successes+1)-1, b.length());
 
 											std::string k1 = decimal_to_b60(n+1);
-											disk.write(k1.c_str(), 3*sizeof(char));
+
+											b = b1 + k1 + b2;
+											write_request(b, save+1);
+
+											std::cout << b << std::endl;
 
 											successes++;
 											break;
 										}
 									}
-
-								}
-
-
-							}
-						}
-/*						int o;
-						for (o = blocks_to_add.size() ; o < std::min(blocks_needed, (block_size/4)) ; o++) {
-							int k;
-							for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
-								if (free_block_list[k] == '0') {
-									free_block_list[k] = '1';
-									blocks_to_add.push_back(k+1);
-									break;
 								}
 							}
-
 						}
-*/
 					}
 				}
-
 			}
-
 		}
 		if (blocks_to_add.size() != blocks_needed) {
 			puts("There aren't enough blocks left to hold a file that big\n");
@@ -1201,6 +1211,8 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 			int block = readme.direct_blocks[traverse];
 
+			if (block == 0) break;
+
 			std::string line_s = read_request(block);
 
 			/*
@@ -1211,6 +1223,8 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 
 			int len = line_s.length();
+
+			std::cout << num_bytes << " " << len << std::endl;
 
 			line_s = line_s.substr((start_byte%(block_size-1)), std::min(num_bytes, std::min(len, block_size-1)));
 
@@ -1233,6 +1247,8 @@ void read(std::string fname, int start_byte, int num_bytes){
 			getline(disk, line, '\n');
 */
 
+			if (id_block == 0) break;
+
 			std::string line = read_request(id_block);
 
 			int mini_traverse = traverse - 12;
@@ -1250,6 +1266,8 @@ line = line.substr(0, line.find(' '));
 			char line2[block_size-1];
 			disk.read(line2, block_size-1);
 */
+
+			if (direct == 0) break;
 
 			std::string line_s = read_request(direct);
 
@@ -1273,6 +1291,8 @@ line = line.substr(0, line.find(' '));
 
 		while (traverse >= (12+(block_size/4)) and traverse < (12 + (block_size/4) + (block_size/4)*(block_size/4)) and num_bytes > 0) {
 			int did_block = readme.double_indirect_block;
+
+			if (did_block == 0) break;
 
 			/*disk.seekg((did_block-1)*(block_size), std::ios::beg);
 
@@ -1299,6 +1319,8 @@ line = line.substr(0, line.find(' '));
 			getline(disk, line, '\n');
 			*/
 
+			if (id_block == 0) break;
+
 			line = read_request(id_block);
 
 			int direct_block_index = macro_traverse % (block_size/4);
@@ -1314,6 +1336,8 @@ line = line.substr(0, line.find(' '));
 			char line2[block_size-1];
 			disk.read(line2, block_size-1);
 			*/
+
+			if (direct == 0) break;
 
 			std::string line_s = read_request(direct);
 
