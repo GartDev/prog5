@@ -60,7 +60,6 @@ std::string read_request(int block);
 void shutdown_request();
 
 
-
 int main(int argc, char **argv){
 	if(argc < 2){
 		std::cout << "Error: too few arguments." << std::endl;
@@ -418,7 +417,7 @@ void split_write(std::string fname, char to_write, int start_byte, int num_bytes
 void deleteFile(std::string fileName){
 	int directsum = 0;
 	if(inode_map.count(fileName)==0){
-		printf("cannot remove %s : no such file \n", fileName);
+		printf("cannot remove %s : No such file \n", fileName.c_str());
 		return;
 	}
 	if(!inode_map[fileName].direct_blocks.empty()){
@@ -426,9 +425,9 @@ void deleteFile(std::string fileName){
 			if(inode_map[fileName].direct_blocks[i]!=0){
 				directsum += 1;
 				int freeIndex = inode_map[fileName].direct_blocks[i]-1;
-				pthread_mutex_lock(&map_mutex);
+				pthread_mutex_lock(&free_mutex);
 				free_block_list[freeIndex]= '0';
-				pthread_mutex_unlock(&map_mutex);
+				pthread_mutex_unlock(&free_mutex);
 			}
 		}
 	}
@@ -454,18 +453,18 @@ void deleteFile(std::string fileName){
 				while(q!=NULL){//for each numbre in indirect
 					q = strtok(NULL," ");
 					dblock = b60_to_decimal(q);
-					pthread_mutex_lock(&map_mutex);
+					pthread_mutex_lock(&free_mutex);
 					free_block_list[dblock-1] = '0'; //free direct blocks
-					pthread_mutex_unlock(&map_mutex);
+					pthread_mutex_unlock(&free_mutex);
 				}
-				pthread_mutex_lock(&map_mutex);
+				pthread_mutex_lock(&free_mutex);
 				free_block_list[idremoveblock-1] = '0';
-				pthread_mutex_unlock(&map_mutex);
+				pthread_mutex_unlock(&free_mutex);
 				delete [] idtarget;
 			}
-			pthread_mutex_lock(&map_mutex);
+			pthread_mutex_lock(&free_mutex);
 			free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
-			pthread_mutex_unlock(&map_mutex);
+			pthread_mutex_unlock(&free_mutex);
 			int indirect_block_num = inode_map[fileName].indirect_block;
 			int dblock;
 			std::string indirect_line = read_request(indirect_block_num);
@@ -475,13 +474,13 @@ void deleteFile(std::string fileName){
 			while(blocknum!=NULL){
 				blocknum = strtok(NULL," ");
 				dblock = b60_to_decimal(blocknum);
-				pthread_mutex_lock(&map_mutex);
+				pthread_mutex_lock(&free_mutex);
 				free_block_list[dblock-1] = '0';
-				pthread_mutex_unlock(&map_mutex);
+				pthread_mutex_unlock(&free_mutex);
 			}
-			pthread_mutex_lock(&map_mutex);
+			pthread_mutex_lock(&free_mutex);
 			free_block_list[inode_map[fileName].indirect_block-1] = '0';
-			pthread_mutex_unlock(&map_mutex);
+			pthread_mutex_unlock(&free_mutex);
 			delete [] id_line;
 			delete [] target;
 		}else{ //if indirect_block isnt full
@@ -496,19 +495,19 @@ void deleteFile(std::string fileName){
 			while(blocknum!=NULL){
 				blocknum = strtok(NULL," ");
 				dblock = b60_to_decimal(blocknum);
-				pthread_mutex_lock(&map_mutex);
+				pthread_mutex_lock(&free_mutex);
 				free_block_list[dblock-1] = '0';
-				pthread_mutex_unlock(&map_mutex);
+				pthread_mutex_unlock(&free_mutex);
 			}
-			pthread_mutex_lock(&map_mutex);
+			pthread_mutex_lock(&free_mutex);
 			free_block_list[inode_map[fileName].indirect_block-1] = '0';
-			pthread_mutex_unlock(&map_mutex);
+			pthread_mutex_unlock(&free_mutex);
 			delete [] id_line;
 		}
 	}//Final inode deletion
-	pthread_mutex_lock(&map_mutex);
+	pthread_mutex_lock(&free_mutex);
 	free_block_list[inode_map[fileName].location - 1] = '0';
-	pthread_mutex_unlock(&map_mutex);
+	pthread_mutex_unlock(&free_mutex);
 	int local = (inode_map[fileName].location);
 	char * toWrite = new char[block_size];
 	for(int i = 0;i<(block_size);i++){
@@ -983,18 +982,23 @@ void read_primitive(int block_number) {
 
 void read(std::string fname, int start_byte, int num_bytes){
 	//georege aint got no sauce
-
+	if(inode_map.count(fname) == 0){
+		printf("%s: No such file\n",fname.c_str());
+		return;
+	}
 	if (start_byte == 0) {
 		start_byte = 1;
 	}
 
+	inode readme = inode_map[fname];
 	printf("START: %d, NUM: %d\n", start_byte, num_bytes);
 
-	inode readme = inode_map[fname];
+	//inode readme = inode_map[fname];
 	int current_size = readme.file_size;
 
 	if(current_size < start_byte){
 		printf("Start byte is out of range for read on %s\n", readme.file_name.c_str());
+		return;
 
 	} else {
 		std::string last = "";
@@ -1228,7 +1232,7 @@ void ssfsCat(std::string fileName){
 	if(inode_map.count(fileName) != 0){
 		read(fileName,1,inode_map[fileName].file_size);
 	}else{
-		printf("%s : No such file \n", fileName);
+		printf("%s : No such file \n", fileName.c_str());
 	}
 }
 
