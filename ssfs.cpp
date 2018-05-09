@@ -188,7 +188,7 @@ void *read_file(void *arg){
 	pthread_mutex_lock(&num_mutex);
 	num_threads--;
 	pthread_mutex_unlock(&num_mutex);
-	printf("Saving and shutting down %s ...\n", thread_name.c_str());
+	printf("Saving and shutting down %s ...\n", thread_name);
 	if(num_threads == 0){
 		shutdown_request();
 	}
@@ -544,6 +544,8 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 		int bytes_needed = (start_byte + num_bytes) - writ.file_size;
 		blocks_needed = ceil((float) bytes_needed / (block_size-1));
 
+		int had_id = 1;
+		int had_did = 1;
 		std::vector<int> blocks_to_add;
 		std::vector<int> bta_direct;
 		std::vector<int> indirect_blocks;
@@ -585,8 +587,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						free_block_list[k] = '1';
 						writ.indirect_block = k+1;
 						inode_map[file_name].indirect_block = k+1;
-						indirect_blocks.push_back(k+1);
-
+						had_id = 0;
 
 						int save = k;
 
@@ -706,6 +707,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						free_block_list[k] = '1';
 						writ.double_indirect_block = k+1;
 						inode_map[file_name].double_indirect_block = k+1;
+						had_did = 0;
 
 						int save_lopez = k;
 
@@ -1007,12 +1009,21 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 				free_block_list[indirect_blocks[i]-1] = '0';
 			}
 
-			if (inode_map[file_name].double_indirect_block != 0) {
+			if (!had_did && inode_map[file_name].double_indirect_block != 0) {
 				free_block_list[inode_map[file_name].double_indirect_block-1] = '0';
 			}
 
-			inode_map[file_name].indirect_block = 0;
-			inode_map[file_name].double_indirect_block = 0;
+
+			if (!had_id) {
+				free_block_list[inode_map[file_name].indirect_block-1] = '0';
+				inode_map[file_name].indirect_block = 0;
+				std::cout << "Here id" << std::endl;
+			}
+
+			if (!had_did) {
+				inode_map[file_name].double_indirect_block = 0;
+				std::cout << "Here did" << std::endl;
+			}
 
 			return 0;
 		} else {
@@ -1540,6 +1551,7 @@ int createFile(std::string fileName){
 		this_node.location = freeblock;
 		pthread_mutex_lock(&map_mutex);
 		inode_map[fileName] = this_node;
+		files_in_system++;
 		pthread_mutex_unlock(&map_mutex);
 		}else{
 			printf("There is no room in the inode map for %s\n", fileName.c_str());
@@ -1782,29 +1794,35 @@ inode_map["sample.txt"] = sample;
 inode_map["sample2.txt"] = sample2;
 */
 
-	for (auto const& it : inode_map) {
+	std::map<std::string, inode>::iterator it;
+
+	for (it = inode_map.begin() ; it != inode_map.end() ; it++) {
+
 		int seek = 0;
 
-		disk.write(it.second.file_name.c_str(), it.second.file_name.length()*sizeof(char));
+		disk.write(it->second.file_name.c_str(), it->second.file_name.length()*sizeof(char));
 		disk.write(":", sizeof(char));
-		seek += it.second.file_name.length()*sizeof(char) + sizeof(char);
+		seek += it->second.file_name.length()*sizeof(char) + sizeof(char);
 
 		char h[5];
-		sprintf(h, "%x", it.second.location);
+		sprintf(h, "%x", it->second.location);
 
 		disk.write(h, std::string(h).length()*sizeof(char));
 		disk.write(":", sizeof(char));
 		seek += std::string(h).length()*sizeof(char) + sizeof(char);
 
-		sprintf(h, "%x", it.second.file_size);
-		disk.write(h, std::string(h).length()*sizeof(char));
+		char k[5];
+		sprintf(k, "%x", it->second.file_size);
+
+		disk.write(k, std::string(k).length()*sizeof(char));
 		disk.write(":", sizeof(char));
-		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+		seek += std::string(k).length()*sizeof(char) + sizeof(char);
 
 		int i;
-		for (i = 0 ; i < it.second.direct_blocks.size() ; i++) {
-			sprintf(h, "%x", it.second.direct_blocks[i]);
-			disk.write(h, std::string(h).length()*sizeof(char));
+		for (i = 0 ; i < 12 ; i++) {
+			char l[5];
+			sprintf(l, "%x", it->second.direct_blocks[i]);
+			disk.write(l, std::string(l).length()*sizeof(char));
 
 			if (i == 11) {
 				disk.write(":", sizeof(char));
@@ -1812,17 +1830,19 @@ inode_map["sample2.txt"] = sample2;
 				disk.write(" ", sizeof(char));
 			}
 
-			seek += std::string(h).length()*sizeof(char) + sizeof(char);
+			seek += std::string(l).length()*sizeof(char) + sizeof(char);
 		}
 
-		sprintf(h, "%x", it.second.indirect_block);
-		disk.write(h, std::string(h).length()*sizeof(char));
+		char m[5];
+		sprintf(m, "%x", it->second.indirect_block);
+		disk.write(m, std::string(m).length()*sizeof(char));
 		disk.write(":", sizeof(char));
-		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+		seek += std::string(m).length()*sizeof(char) + sizeof(char);
 
-		sprintf(h, "%x", it.second.double_indirect_block);
-		disk.write(h, std::string(h).length()*sizeof(char));
-		seek += std::string(h).length()*sizeof(char);
+		char n[5];
+		sprintf(n, "%x", it->second.double_indirect_block);
+		disk.write(n, std::string(n).length()*sizeof(char));
+		seek += std::string(n).length()*sizeof(char);
 
 		int pos = disk.tellp();
 
