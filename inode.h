@@ -23,10 +23,10 @@ class inode {
 		this->double_indirect_block = 0;
 	}
 
-        std::string file_name;
+	std::string file_name;
 	int location;
-        int file_size;
-        std::vector<int> direct_blocks;
-        int indirect_block;
+	int file_size;
+	std::vector<int> direct_blocks;
+	int indirect_block;
 	int double_indirect_block;
 };
