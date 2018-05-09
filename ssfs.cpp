@@ -1400,7 +1400,7 @@ void import(std::string ssfs_file, std::string unix_file){
 	}
 
 	char ch;
-	int curr_byte = 0;
+	int curr_byte = 1;
 	//std::cout << "begin import" << std::endl;
 	while(unix_fstream >> noskipws >> ch){
 		//std::cout << ch;
@@ -1413,7 +1413,7 @@ void import(std::string ssfs_file, std::string unix_file){
 
 void ssfsCat(std::string fileName){
 	if(inode_map.count(fileName) != 0){
-		read(fileName,1,inode_map[fileName].file_size);
+		read(fileName,0,inode_map[fileName].file_size);
 	}else{
 		printf("%s : No such file \n", fileName.c_str());
 	}
