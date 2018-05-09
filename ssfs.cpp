@@ -414,55 +414,75 @@ void deleteFile(std::string fileName){
 			if(atCapacity(inode_map[fileName].indirect_block,0) == 1){
 				if(inode_map[fileName].double_indirect_block != 0){
 					int lineNum = inode_map[fileName].double_indirect_block;
-					std::string dibLine;
-					dibLine = read_request(lineNum);
 					int idremoveblock;
-					char * target = new char [dibLine.length()];
+					std::string dibLine  = read_request(lineNum);
+					char * target = new char [dibLine.length()+1];
 		  			strcpy (target, dibLine.c_str()); //copy line of doubleindirect into target
-					const char * p = strtok(target," ");
-					while(p!=NULL){ //for each number in double indirect
-						p = strtok(NULL," "); //p = value
-						idremoveblock = b60_to_decimal(p); //convert indirect block# inside double indirect to decimal put in idremoveblock
-						int id_linenum = idremoveblock; //Number of each indirect_block in double
+					const char * indirblock = strtok(target," ");
+					while(indirblock!=decimal_to_b60(0)){ //for each number in double indirect //p = value
+						idremoveblock = b60_to_decimal(indirblock); //convert indirect block# inside double indirect to decimal put in idremoveblock
+						int dblock;//Number of each indirect_block in double
 						std::string ibLine;
-						ibLine = read_request(id_linenum);
-						int dblock;
-						char * idtarget = new char [ibLine.length()]; //string of direct blocks inside indirect block
+						ibLine = read_request(idremoveblock);
+						char * idtarget = new char[ibLine.length()+1]; //string of direct blocks inside indirect block
 			  			strcpy (idtarget, ibLine.c_str());
-						const char * q = strtok(idtarget," "); //tokens of each of those
-						while(q!=NULL){//for each numbre in indirect
-							q = strtok(NULL," ");
-							dblock = b60_to_decimal(q);
+						const char * dirblock= strtok(idtarget," "); //tokens of each of those
+						//SEGFAULT: seg fault is doing this inner while 32 times then segfaulting
+						while(dirblock!=decimal_to_b60(0)){//for each numbre in indirect
+							dblock = b60_to_decimal(dirblock);
 							pthread_mutex_lock(&free_mutex);
 							free_block_list[dblock-1] = '0'; //free direct blocks
 							pthread_mutex_unlock(&free_mutex);
+							dirblock = strtok(NULL," ");
 						}
 						pthread_mutex_lock(&free_mutex);
 						free_block_list[idremoveblock-1] = '0';
 						pthread_mutex_unlock(&free_mutex);
+						indirblock = strtok(NULL," ");
 						delete [] idtarget;
 					}
+					delete [] target;
 					pthread_mutex_lock(&free_mutex);
 					free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
 					pthread_mutex_unlock(&free_mutex);
 					int indirect_block_num = inode_map[fileName].indirect_block;
 					int dblock;
 					std::string indirect_line = read_request(indirect_block_num);
-					char * id_line = new char[indirect_line.length()];
+					char * id_line = new char[indirect_line.length()+1];
 					strcpy (id_line, indirect_line.c_str());
 					const char * blocknum = strtok(id_line," ");
-					while(blocknum!=NULL){
-						blocknum = strtok(NULL," ");
+					while(blocknum!=decimal_to_b60(0)){
 						dblock = b60_to_decimal(blocknum);
 						pthread_mutex_lock(&free_mutex);
 						free_block_list[dblock-1] = '0';
 						pthread_mutex_unlock(&free_mutex);
+						blocknum = strtok(NULL," ");
 					}
 					pthread_mutex_lock(&free_mutex);
 					free_block_list[inode_map[fileName].indirect_block-1] = '0';
 					pthread_mutex_unlock(&free_mutex);
 					delete [] id_line;
-					delete [] target;
+				}else{
+					pthread_mutex_lock(&free_mutex);
+					free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
+					pthread_mutex_unlock(&free_mutex);
+					int indirect_block_num = inode_map[fileName].indirect_block;
+					int dblock;
+					std::string indirect_line = read_request(indirect_block_num);
+					char * id_line = new char[indirect_line.length()+1];
+					strcpy (id_line, indirect_line.c_str());
+					const char * blocknum = strtok(id_line," ");
+					while(blocknum!=decimal_to_b60(0)){
+						dblock = b60_to_decimal(blocknum);
+						pthread_mutex_lock(&free_mutex);
+						free_block_list[dblock-1] = '0';
+						pthread_mutex_unlock(&free_mutex);
+						blocknum = strtok(NULL," ");
+					}
+					pthread_mutex_lock(&free_mutex);
+					free_block_list[inode_map[fileName].indirect_block-1] = '0';
+					pthread_mutex_unlock(&free_mutex);
+					delete [] id_line;
 				}
 			}else{ //if indirect_block isnt full
 				int indirect_block_num = inode_map[fileName].indirect_block;
@@ -470,15 +490,15 @@ void deleteFile(std::string fileName){
 				int dblock;
 				std::string indirect_line;
 				indirect_line = read_request(indirect_pos);
-				char * id_line = new char[indirect_line.length()];
+				char * id_line = new char[indirect_line.length()+1];
 				strcpy (id_line, indirect_line.c_str());
 				const char * blocknum = strtok(id_line," ");
-				while(blocknum!=NULL){
-					blocknum = strtok(NULL," ");
+				while(blocknum!=decimal_to_b60(0)){
 					dblock = b60_to_decimal(blocknum);
 					pthread_mutex_lock(&free_mutex);
 					free_block_list[dblock-1] = '0';
 					pthread_mutex_unlock(&free_mutex);
+					blocknum = strtok(NULL," ");
 				}
 				pthread_mutex_lock(&free_mutex);
 				free_block_list[inode_map[fileName].indirect_block-1] = '0';
@@ -544,6 +564,8 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 		int bytes_needed = (start_byte + num_bytes) - writ.file_size;
 		blocks_needed = ceil((float) bytes_needed / (block_size-1));
 
+		int had_id = 1;
+		int had_did = 1;
 		std::vector<int> blocks_to_add;
 		std::vector<int> bta_direct;
 		std::vector<int> indirect_blocks;
@@ -585,8 +607,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						free_block_list[k] = '1';
 						writ.indirect_block = k+1;
 						inode_map[file_name].indirect_block = k+1;
-						indirect_blocks.push_back(k+1);
-
+						had_id = 0;
 
 						int save = k;
 
@@ -646,7 +667,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 				std::string line = read_request(id_block);
 
 				if (line.substr(block_size-4, block_size-1) == "000") {
-				
+
 					int ctr = 0;
 					while (line != "000" and line.substr(0, line.find(' ')) != "000") {
 						line = line.substr(line.find(' ')+1, line.length());
@@ -706,6 +727,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						free_block_list[k] = '1';
 						writ.double_indirect_block = k+1;
 						inode_map[file_name].double_indirect_block = k+1;
+						had_did = 0;
 
 						int save_lopez = k;
 
@@ -811,7 +833,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 					did_line = read_request(did_block);
 					for (ctr = ctr ; ctr > 0 ; ctr--) {
-						did_line = did_line.substr(did_line.find(' ')+1);	
+						did_line = did_line.substr(did_line.find(' ')+1);
 					}
 
 					did_line = did_line.substr(0, did_line.find(' '));
@@ -834,7 +856,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 					std::string line = read_request(id_line_num);
 
 					if (line.substr(block_size-4, block_size-1) == "000") {
-				
+
 						int ctr = 0;
 						while (line != "000" and line.substr(0, line.find(' ')) != "000") {
 							line = line.substr(line.find(' ')+1, line.length());
@@ -989,10 +1011,10 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 					}
 
 
-					
+
 					george_lopez++;
 					ctr_lopez = george_lopez;
-				}				
+				}
 			}
 		}
 		if (blocks_to_add.size() != blocks_needed) {
@@ -1007,12 +1029,21 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 				free_block_list[indirect_blocks[i]-1] = '0';
 			}
 
-			if (inode_map[file_name].double_indirect_block != 0) {
+			if (!had_did && inode_map[file_name].double_indirect_block != 0) {
 				free_block_list[inode_map[file_name].double_indirect_block-1] = '0';
 			}
 
-			inode_map[file_name].indirect_block = 0;
-			inode_map[file_name].double_indirect_block = 0;
+
+			if (!had_id) {
+				free_block_list[inode_map[file_name].indirect_block-1] = '0';
+				inode_map[file_name].indirect_block = 0;
+				std::cout << "Here id" << std::endl;
+			}
+
+			if (!had_did) {
+				inode_map[file_name].double_indirect_block = 0;
+				std::cout << "Here did" << std::endl;
+			}
 
 			return 0;
 		} else {
@@ -1540,6 +1571,7 @@ int createFile(std::string fileName){
 		this_node.location = freeblock;
 		pthread_mutex_lock(&map_mutex);
 		inode_map[fileName] = this_node;
+		files_in_system++;
 		pthread_mutex_unlock(&map_mutex);
 		}else{
 			printf("There is no room in the inode map for %s\n", fileName.c_str());
@@ -2393,30 +2425,37 @@ inode_map["sample.txt"] = sample;
 inode_map["sample2.txt"] = sample2;
 */
 
-	for (auto const& it : inode_map) {
+	std::map<std::string, inode>::iterator it;
+
+	for (it = inode_map.begin() ; it != inode_map.end() ; it++) {
+
 		int seek = 0;
 
-		disk.write(it.second.file_name.c_str(), it.second.file_name.length()*sizeof(char));
+		disk.write(it->second.file_name.c_str(), it->second.file_name.length()*sizeof(char));
 		disk.write(":", sizeof(char));
-		seek += it.second.file_name.length()*sizeof(char) + sizeof(char);
+		seek += it->second.file_name.length()*sizeof(char) + sizeof(char);
 
 		char h[5];
-		int write_location = distance(inode_map.begin(),inode_map.find(it.second.file_name))+(3+(num_blocks/(block_size-1)));
+
+		int write_location = distance(inode_map.begin(),inode_map.find(it->second.file_name))+(3+(num_blocks/(block_size-1)));
 		sprintf(h, "%x", write_location);
 
 		disk.write(h, std::string(h).length()*sizeof(char));
 		disk.write(":", sizeof(char));
 		seek += std::string(h).length()*sizeof(char) + sizeof(char);
 
-		sprintf(h, "%x", it.second.file_size);
-		disk.write(h, std::string(h).length()*sizeof(char));
+		char k[5];
+		sprintf(k, "%x", it->second.file_size);
+
+		disk.write(k, std::string(k).length()*sizeof(char));
 		disk.write(":", sizeof(char));
-		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+		seek += std::string(k).length()*sizeof(char) + sizeof(char);
 
 		int i;
-		for (i = 0 ; i < it.second.direct_blocks.size() ; i++) {
-			sprintf(h, "%x", it.second.direct_blocks[i]);
-			disk.write(h, std::string(h).length()*sizeof(char));
+		for (i = 0 ; i < 12 ; i++) {
+			char l[5];
+			sprintf(l, "%x", it->second.direct_blocks[i]);
+			disk.write(l, std::string(l).length()*sizeof(char));
 
 			if (i == 11) {
 				disk.write(":", sizeof(char));
@@ -2424,17 +2463,19 @@ inode_map["sample2.txt"] = sample2;
 				disk.write(" ", sizeof(char));
 			}
 
-			seek += std::string(h).length()*sizeof(char) + sizeof(char);
+			seek += std::string(l).length()*sizeof(char) + sizeof(char);
 		}
 
-		sprintf(h, "%x", it.second.indirect_block);
-		disk.write(h, std::string(h).length()*sizeof(char));
+		char m[5];
+		sprintf(m, "%x", it->second.indirect_block);
+		disk.write(m, std::string(m).length()*sizeof(char));
 		disk.write(":", sizeof(char));
-		seek += std::string(h).length()*sizeof(char) + sizeof(char);
+		seek += std::string(m).length()*sizeof(char) + sizeof(char);
 
-		sprintf(h, "%x", it.second.double_indirect_block);
-		disk.write(h, std::string(h).length()*sizeof(char));
-		seek += std::string(h).length()*sizeof(char);
+		char n[5];
+		sprintf(n, "%x", it->second.double_indirect_block);
+		disk.write(n, std::string(n).length()*sizeof(char));
+		seek += std::string(n).length()*sizeof(char);
 
 		int pos = disk.tellp();
 
