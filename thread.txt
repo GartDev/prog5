@@ -1,1 +1,2 @@
-WRITE sample3.txt f 50000 40000
+CREATE sample.txt
+WRITE sample.txt h 7380190 2000000
