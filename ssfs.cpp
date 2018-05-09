@@ -62,7 +62,7 @@ void shutdown_request();
 
 int main(int argc, char **argv){
 	if(argc < 2){
-		std::cout << "Error: too few arguments." << std::endl;
+		puts("Error: too few arguments.");
 		exit(1);
 	}
 
@@ -112,7 +112,7 @@ int main(int argc, char **argv){
 	for(int i = 2; i < argc; i++){
 		rc = pthread_create(&producers[i-2], NULL, read_file, (void*)argv[i]);
 		if(rc){
-			std::cout << "Unable to create thread." << std::endl;
+			puts("Unable to create thread.");
 			exit(0);
 		}
 	}
@@ -136,28 +136,28 @@ void *read_file(void *arg){
 	//print lines of the file, don't delete yet
 	std::string line;
 	while(std::getline(opfile,line)){
-        std::cout << line << std::endl;
+        printf("%s\n", line.c_str());
 		std::istringstream line_stream(line);
 		std::string command;
 		line_stream >> command;
 		std::string ssfs_file;
 		if(command == "CREATE"){
 			line_stream >> ssfs_file;
-			std::cout << "Creating " << ssfs_file << std::endl;
+			printf("Creating %s\n", ssfs_file.c_str());
 			createFile(ssfs_file);
 		}else if(command == "IMPORT"){
 			line_stream >> ssfs_file;
 			std::string unix_file;
 			line_stream >> unix_file;
-			std::cout << "Importing unix file " << unix_file << " as \'" << ssfs_file << "\'" << std::endl;
+			printf("Importing unix file %s as '%s'\n", unix_file.c_str(), ssfs_file.c_str());
 			//import(ssfs_file,unix_file);
 		}else if(command == "CAT"){
 			line_stream >> ssfs_file;
-			std::cout << "Contents of " << ssfs_file << std::endl;
+			printf("Contents of %s\n", ssfs_file.c_str());
 			//ssfsCat(ssfs_file);
 		}else if(command == "DELETE"){
 			line_stream >> ssfs_file;
-			std::cout << "Deleting " << ssfs_file << std::endl;
+			printf("Deleting %s\n", ssfs_file.c_str());
 			deleteFile(ssfs_file);
 		}else if(command == "WRITE"){
 			line_stream >> ssfs_file;
@@ -166,21 +166,21 @@ void *read_file(void *arg){
 			line_stream >> c;
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
-			std::cout << "Writing character '" << c << "' into "<< ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
+			printf("Writing character '%c' into %s from byte %d to byte %d\n", c, ssfs_file.c_str(), start_byte, (start_byte+num_bytes));
 			write(ssfs_file,c,start_byte,num_bytes);
 		}else if(command == "READ"){
 			line_stream >> ssfs_file;
 			int start_byte, num_bytes;
 			line_stream >> start_byte;
 			line_stream >> num_bytes;
-			std::cout << "Reading file " << ssfs_file << " from byte " << start_byte << " to byte " << (start_byte + num_bytes) << std::endl;
+			printf("Reading file %s from byte %d to byte %d\n", ssfs_file.c_str(), start_byte, (start_byte+num_bytes));
 			read(ssfs_file,start_byte,num_bytes);
 		}else if(command == "LIST"){
 			list();
 		}else if(command == "SHUTDOWN"){
 			break;
 		}else {
-			std::cout << line << ": command not found" << std::endl;
+			printf("%s: command not found\n", line);
 		}
 	}
 	opfile.close();
@@ -188,7 +188,7 @@ void *read_file(void *arg){
 	pthread_mutex_lock(&num_mutex);
 	num_threads--;
 	pthread_mutex_unlock(&num_mutex);
-	std::cout << "Saving and shutting down " << thread_name << "..." << std::endl;
+	printf("Saving and shutting down %s ...\n", thread_name.c_str());
 	if(num_threads == 0){
 		shutdown_request();
 	}
@@ -391,28 +391,6 @@ void build_free_block_list() {
 
 // Disk Ops below ------------------------
 
-void split_write(std::string fname, char to_write, int start_byte, int num_bytes){
-	/*
-	//I'm assuming that there is a global buffer somewhere I can write into
-	std::string better_char = "G";
-	better_char.front() = to_write;
-	if(num_bytes > block_size){
-		int extra = num_bytes%block_size;
-	       	int easy_bytes = num_bytes - extra;
-		int i;
-		int j;
-
-		for(i = 0; i < easy_bytes/block_size; i++){
-			write_request piece = write_request(fname, start_byte, block_size-1);
-			for(j = 0; j < (block_size-1); j++){
-				piece.to_write.append(better_char);
-			}
-			//send request to buffer in scheduler
-		}
-	}
-*/
-}
-
 void deleteFile(std::string fileName){
 	int directsum = 0;
 	if(inode_map.count(fileName)==0){
@@ -532,7 +510,8 @@ void list(){
 	}
 	map<string,inode>::iterator it;
 	for(it = inode_map.begin(); it != inode_map.end(); it++){
-		std::cout << it->second.file_name << " size: " << it->second.file_size << " bytes" << std::endl;
+		printf("%s size: %d bytes\n", it->second.file_name.c_str(), it->second.file_size);
+
 	}
 }
 
@@ -567,6 +546,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 		std::vector<int> blocks_to_add;
 		std::vector<int> bta_direct;
+		std::vector<int> indirect_blocks;
 
 		int j;
 		for (j = 0 ; j < 12 ; j++) {
@@ -605,6 +585,8 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						free_block_list[k] = '1';
 						writ.indirect_block = k+1;
 						inode_map[file_name].indirect_block = k+1;
+						indirect_blocks.push_back(k+1);
+
 
 						int save = k;
 
@@ -755,8 +737,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 								std::string ddb = read_request(save_lopez+1);
 
-								std::cout << ddb << std::endl;
-
 								std::string k1 = decimal_to_b60(m+1);
 						//		disk.write(k1.c_str(), 3*sizeof(char));
 
@@ -779,6 +759,8 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 								}
 
 								write_request(lb, m+1);
+								indirect_blocks.push_back(m+1);
+
 								int bta_size = blocks_to_add.size();
 								successes_lopez++;
 
@@ -813,8 +795,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 				//did block nonzero
 
 				std::string did_line = read_request(did_block);
-
-				std::cout << did_line << std::endl;
 
 				int ctr = 0;
 				while (did_line.substr(0, did_line.find(' ')) != "000") {
@@ -954,7 +934,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						if (free_block_list[m] == '0') {
 							free_block_list[m] = '1';
 
-							
+							indirect_blocks.push_back(m+1);
 
 							std::string ddb = read_request(did_block);
 
@@ -963,8 +943,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 							std::string ddb1 = ddb.substr(0, 4*successes_lopez);
 							std::string ddb2 = ddb.substr(4*(successes_lopez+1)-1, ddb.length());
 
-
-							std::cout << ddb1 << "|" << k1 << "|" << ddb2 << std::endl;
 
 							write_request(ddb1+k1+ddb2, did_block);
 
@@ -1018,13 +996,23 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 			}
 		}
 		if (blocks_to_add.size() != blocks_needed) {
-			puts("There aren't enough blocks left to hold a file that big\n");
+			puts("There aren't enough blocks left to hold a file that big");
 
 			int i;
 			for (i = 0 ; i < blocks_to_add.size() ; i++) {
-				std::cout << blocks_to_add[i] << std::endl;
-				free_block_list[blocks_to_add[i]+1] = '0';
+				free_block_list[blocks_to_add[i]-1] = '0';
 			}
+
+			for (i = 0 ; i < indirect_blocks.size() ; i++) {
+				free_block_list[indirect_blocks[i]-1] = '0';
+			}
+
+			if (inode_map[file_name].double_indirect_block != 0) {
+				free_block_list[inode_map[file_name].double_indirect_block-1] = '0';
+			}
+
+			inode_map[file_name].indirect_block = 0;
+			inode_map[file_name].double_indirect_block = 0;
 
 			return 0;
 		} else {
@@ -1035,8 +1023,8 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 			int start = bta_direct.size();
 
-			for (i = 0 ; i < writ.direct_blocks.size() ; i++) {
-				if (writ.direct_blocks[i] == 0) {
+			for (i = 0 ; i < inode_map[file_name].direct_blocks.size() ; i++) {
+				if (inode_map[file_name].direct_blocks[i] == 0) {
 					start = i;
 					break;
 				}
@@ -1394,8 +1382,6 @@ void read(std::string fname, int start_byte, int num_bytes){
 
 			int len = line_s.length();
 
-			std::cout << num_bytes << " " << len << std::endl;
-
 			line_s = line_s.substr((start_byte%(block_size-1)), std::min(num_bytes, std::min(len, block_size-1)));
 
 			len = line_s.length();
@@ -1556,10 +1542,10 @@ int createFile(std::string fileName){
 		inode_map[fileName] = this_node;
 		pthread_mutex_unlock(&map_mutex);
 		}else{
-		std::cout << "There is no room in the inode map for " << fileName << std::endl;
+			printf("There is no room in the inode map for %s\n", fileName.c_str());
 		}
 	}else{
-		std::cout << fileName << ": already exists" << std::endl;
+		printf("%s: already exists\n", fileName.c_str());
 	}
 
 }
