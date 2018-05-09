@@ -1,1 +1,1 @@
-READ sample3.txt 1 127
+WRITE sample3.txt f 50000 40000

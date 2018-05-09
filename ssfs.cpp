@@ -541,8 +541,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 		int bytes_needed = (start_byte + num_bytes) - writ.file_size;
 		blocks_needed = ceil((float) bytes_needed / (block_size-1));
 
-		std::cout << blocks_needed << std::endl;
-
 		std::vector<int> blocks_to_add;
 		std::vector<int> bta_direct;
 
@@ -731,11 +729,8 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 			//					disk.seekp(std::ios_base::beg + save_lopez*block_size + successes_lopez*4);
 
 
-								std::cout << "Chose " << m+1 << " for IDB inside of DIDB" << std::endl;
-
 								std::string ddb = read_request(save_lopez+1);
 
-								std::cout << "DDB BEFORE:" << std::endl;
 								std::cout << ddb << std::endl;
 
 								std::string k1 = decimal_to_b60(m+1);
@@ -745,9 +740,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 								std::string ddb2 = ddb.substr(4*(successes_lopez+1)-1, ddb.length());
 
 								write_request(ddb1+k1+ddb2, save_lopez+1);
-
-								std::cout << "DDB AFTER:" << std::endl;
-								std::cout << ddb1 + k1 + ddb2 << std::endl;
 
 //								disk.seekp(std::ios_base::beg + m*block_size);
 								int save = m;
@@ -776,8 +768,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 											std::string b = read_request(save+1);
 
-											std::cout << b << std::endl;
-
 											std::string b1 = b.substr(0, 4*successes);
 											std::string b2 = b.substr(4*(successes+1)-1, b.length());
 
@@ -785,8 +775,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 
 											b = b1 + k1 + b2;
 											write_request(b, save+1);
-
-											std::cout << b << std::endl;
 
 											successes++;
 											break;
@@ -797,6 +785,212 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 						}
 					}
 				}
+			} else {
+				//did block nonzero
+
+				std::string did_line = read_request(did_block);
+
+				std::cout << did_line << std::endl;
+
+				int ctr = 0;
+				while (did_line.substr(0, did_line.find(' ')) != "000") {
+					did_line = did_line.substr(did_line.find(' ')+1);
+					ctr++;
+					if (ctr == (block_size/4)) break;
+				}
+
+				int ctr_lopez = ctr;
+
+				if (ctr != 0) {
+					// check if the previous block has unused direct blocks
+					ctr--;
+
+					did_line = read_request(did_block);
+					for (ctr = ctr ; ctr > 0 ; ctr--) {
+						did_line = did_line.substr(did_line.find(' ')+1);	
+					}
+
+					did_line = did_line.substr(0, did_line.find(' '));
+
+					int id_line_num = b60_to_decimal(did_line.c_str());
+/*
+					std::string id_line = read_request(id_line_num);
+
+					int ctr2 = 0;
+					while (id_line.substr(0, id_line.find(' ')) != "000") {
+						id_line = id_line.substr(id_line.find(' ')+1);
+						ctr++;
+						if (ctr == (block_size/4)) break;
+					}
+
+					if (id_line.length() != 3) {
+						id_line = id_line.substr(0, id_line.find(' ');
+					}
+*/
+					std::string line = read_request(id_line_num);
+
+					if (line.substr(block_size-4, block_size-1) == "000") {
+				
+						int ctr = 0;
+						while (line != "000" and line.substr(0, line.find(' ')) != "000") {
+							line = line.substr(line.find(' ')+1, line.length());
+
+							ctr++;
+						}
+
+		//				std::ofstream disk(disk_file_name, std::ios::in | std::ios::out | std::ios::binary);
+
+						int it;
+						for (it = 4*ctr ; it < (block_size) ; it += 4) {
+							if (blocks_to_add.size() == blocks_needed) {
+								break;
+							}
+
+	//						disk.seekp(std::ios_base::beg + (id_block-1)*block_size + it);
+
+							int k;
+							for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
+								if (free_block_list[k] == '0') {
+									free_block_list[k] = '1';
+									blocks_to_add.push_back(k+1);
+
+									std::string b = read_request(id_line_num);
+
+									std::string b1 = b.substr(0, it);
+									std::string b2 = b.substr(it+3, b.length());
+									std::string k1 = decimal_to_b60(k+1);
+
+									b = b1 + k1 + b2;
+									write_request(b, id_line_num);
+
+									ctr++;
+									break;
+								}
+							}
+						}
+					}
+				}
+
+				// check the next block
+
+				int george_lopez = ctr_lopez;
+				while (ctr_lopez != (block_size/4)) {
+					did_line = read_request(did_block);
+
+					while (ctr_lopez > 0) {
+						did_line = did_line.substr(did_line.find(' ')+1);
+						ctr_lopez--;
+					}
+
+					did_line = did_line.substr(0, did_line.find(' '));
+
+/*
+					int ctr = 0;
+					while (line != "000" and line.substr(0, line.find(' ')) != "000") {
+						line = line.substr(line.find(' ')+1, line.length());
+						ctr++;
+						if (ctr == (block_size/4)) break;
+					}
+
+					int it;
+					for (it = 4*ctr ; it < (block_size) ; it += 4) {
+						if (blocks_to_add.size() == blocks_needed) {
+							break;
+						}
+
+						int k;
+						for (k = (2+(num_blocks/(block_size-1)+256)) ; k < num_blocks ; k++) {
+							if (free_block_list[k] == '0') {
+								free_block_list[k] = '1';
+								blocks_to_add.push_back(k+1);
+
+								std::string b = read_request(id_line_num);
+
+								std::string b1 = b.substr(0, it);
+								std::string b2 = b.substr(it+3, b.length());
+								std::string k1 = decimal_to_b60(k+1);
+
+								b = b1 + k1 + b2;
+								write_request(b, id_line_num);
+
+								ctr++;
+								break;
+							}
+						}
+					}
+*/
+					int m;
+					successes_lopez = george_lopez;
+					for (m = (2+(num_blocks/(block_size-1)+256)) ; m < num_blocks ; m++) {
+
+						if (blocks_to_add.size() == blocks_needed or successes > (block_size)/4) {
+							break;
+						}
+
+						if (free_block_list[m] == '0') {
+							free_block_list[m] = '1';
+
+							
+
+							std::string ddb = read_request(did_block);
+
+							std::string k1 = decimal_to_b60(m+1);
+
+							std::string ddb1 = ddb.substr(0, 4*successes_lopez);
+							std::string ddb2 = ddb.substr(4*(successes_lopez+1)-1, ddb.length());
+
+
+							std::cout << ddb1 << "|" << k1 << "|" << ddb2 << std::endl;
+
+							write_request(ddb1+k1+ddb2, did_block);
+
+							int save = m;
+
+							std::string lb = "";
+
+							int l;
+							for (l = 0 ; l < (block_size/4) ; l++) {
+								lb += "000";
+								if (l+1 != (block_size/4)) {
+									lb += " ";
+								}
+							}
+
+							write_request(lb, m+1);
+							int bta_size = blocks_to_add.size();
+							successes_lopez++;
+
+							successes = 0;
+							for (l = blocks_to_add.size() ; l < std::min(blocks_needed, bta_size+(block_size/4)) ; l++) {
+								int n;
+								for (n = (2+(num_blocks/(block_size-1)+256)) ; n < num_blocks ; n++) {
+									if (free_block_list[n] == '0') {
+										free_block_list[n] = '1';
+										blocks_to_add.push_back(n+1);
+
+										std::string b = read_request(save+1);
+
+										std::string b1 = b.substr(0, 4*successes);
+										std::string b2 = b.substr(4*(successes+1)-1, b.length());
+
+										std::string k1 = decimal_to_b60(n+1);
+
+										b = b1 + k1 + b2;
+										write_request(b, save+1);
+
+										successes++;
+										break;
+									}
+								}
+							}
+						}
+					}
+
+
+					
+					george_lopez++;
+					ctr_lopez = george_lopez;
+				}				
 			}
 		}
 		if (blocks_to_add.size() != blocks_needed) {
@@ -837,30 +1031,6 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 		// no need to allocate just write
 	}
 
-/*
-	int starting_block = start_byte / (block_size-1);
-	int offset = start_byte % (block_size-1);
-
-	if (offset == 0 or offset == 1) {
-		std::string local_buffer = "";
-	} else {
-		std::string local_buffer = read_request(starting_block);
-	}
-
-	int it;
-
-	std::string current_block = read_request(starting_block);
-
-
-	for (it = offset ; it < block_size ; it++) {
-		local_buffer += to_write;
-	}
-
-	write_request(local_buffer, inode_map[file_name].direct_blocks[starting_block]);
-	offset = 0;
-
-	inode_map[file_name].file_size += bytes_needed;
-*/
 	int traverse = start_byte / (block_size-1);
 
 	int macro_traverse = 0;
