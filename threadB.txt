@@ -1,0 +1,3 @@
+IMPORT GEORGE georgelopez.txt
+CAT GEORGE
+DELETE GEORGE
