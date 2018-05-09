@@ -438,52 +438,53 @@ void deleteFile(std::string fileName){
 					std::string dibLine;
 					dibLine = read_request(lineNum);
 					int idremoveblock;
-					char * target = new char [dibLine.length()];
+					char * target = new char [dibLine.length()+1];
 		  			strcpy (target, dibLine.c_str()); //copy line of doubleindirect into target
 					const char * p = strtok(target," ");
-					while(p!=NULL){ //for each number in double indirect
-						p = strtok(NULL," "); //p = value
+					while(p!=decimal_to_b60(0)){ //for each number in double indirect //p = value
 						idremoveblock = b60_to_decimal(p); //convert indirect block# inside double indirect to decimal put in idremoveblock
 						int id_linenum = idremoveblock; //Number of each indirect_block in double
 						std::string ibLine;
 						ibLine = read_request(id_linenum);
 						int dblock;
-						char * idtarget = new char [ibLine.length()]; //string of direct blocks inside indirect block
+						char * idtarget = new char [ibLine.length()+1]; //string of direct blocks inside indirect block
 			  			strcpy (idtarget, ibLine.c_str());
 						const char * q = strtok(idtarget," "); //tokens of each of those
-						while(q!=NULL){//for each numbre in indirect
-							q = strtok(NULL," ");
+						while(q!=decimal_to_b60(0).c_str()){//for each numbre in indirect
 							dblock = b60_to_decimal(q);
 							pthread_mutex_lock(&free_mutex);
 							free_block_list[dblock-1] = '0'; //free direct blocks
 							pthread_mutex_unlock(&free_mutex);
+							q = strtok(NULL," ");
 						}
 						pthread_mutex_lock(&free_mutex);
 						free_block_list[idremoveblock-1] = '0';
 						pthread_mutex_unlock(&free_mutex);
+						p = strtok(NULL," ");
 						delete [] idtarget;
 					}
+					delete [] target;
+				}else{
 					pthread_mutex_lock(&free_mutex);
 					free_block_list[inode_map[fileName].double_indirect_block-1] = '0'; //free the double indirect
 					pthread_mutex_unlock(&free_mutex);
 					int indirect_block_num = inode_map[fileName].indirect_block;
 					int dblock;
 					std::string indirect_line = read_request(indirect_block_num);
-					char * id_line = new char[indirect_line.length()];
+					char * id_line = new char[indirect_line.length()+1];
 					strcpy (id_line, indirect_line.c_str());
 					const char * blocknum = strtok(id_line," ");
-					while(blocknum!=NULL){
-						blocknum = strtok(NULL," ");
+					while(blocknum!=decimal_to_b60(0)){
 						dblock = b60_to_decimal(blocknum);
 						pthread_mutex_lock(&free_mutex);
 						free_block_list[dblock-1] = '0';
 						pthread_mutex_unlock(&free_mutex);
+						blocknum = strtok(NULL," ");
 					}
 					pthread_mutex_lock(&free_mutex);
 					free_block_list[inode_map[fileName].indirect_block-1] = '0';
 					pthread_mutex_unlock(&free_mutex);
 					delete [] id_line;
-					delete [] target;
 				}
 			}else{ //if indirect_block isnt full
 				int indirect_block_num = inode_map[fileName].indirect_block;
@@ -491,15 +492,15 @@ void deleteFile(std::string fileName){
 				int dblock;
 				std::string indirect_line;
 				indirect_line = read_request(indirect_pos);
-				char * id_line = new char[indirect_line.length()];
+				char * id_line = new char[indirect_line.length()+1];
 				strcpy (id_line, indirect_line.c_str());
 				const char * blocknum = strtok(id_line," ");
-				while(blocknum!=NULL){
-					blocknum = strtok(NULL," ");
+				while(blocknum!=decimal_to_b60(0)){
 					dblock = b60_to_decimal(blocknum);
 					pthread_mutex_lock(&free_mutex);
 					free_block_list[dblock-1] = '0';
 					pthread_mutex_unlock(&free_mutex);
+					blocknum = strtok(NULL," ");
 				}
 				pthread_mutex_lock(&free_mutex);
 				free_block_list[inode_map[fileName].indirect_block-1] = '0';
@@ -668,7 +669,7 @@ int write(std::string file_name, char to_write, int start_byte, int num_bytes) {
 				std::string line = read_request(id_block);
 
 				if (line.substr(block_size-4, block_size-1) == "000") {
-				
+
 					int ctr = 0;
 					while (line != "000" and line.substr(0, line.find(' ')) != "000") {
 						line = line.substr(line.find(' ')+1, line.length());
