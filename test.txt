@@ -10,3 +10,4 @@ CREATE file5.txt
 WRITE file5.txt a 0 5600
 CREATE file6.txt
 WRITE file6.txt a 0 5600
+SHUTDOWN
