@@ -1,0 +1,4 @@
+CREATE file1.txt
+WRITE file1.txt a 0 5000
+LIST
+READ file1.txt 0 4999

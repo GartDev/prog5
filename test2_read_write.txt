@@ -1,0 +1,6 @@
+CREATE filerw2.txt
+WRITE filerw2.txt x 0 200
+READ filerw2.txt 5 38
+READ filerw2.txt 5 130
+WRITE filerw2.txt y 5 19
+READ filerw2.txt 3 50

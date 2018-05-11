@@ -1,0 +1,3 @@
+IMPORT xl.txt xl_import.txt
+LIST
+CAT xl.txt

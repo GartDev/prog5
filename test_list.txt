@@ -1,0 +1,10 @@
+LIST
+CREATE filetestlist1.txt
+CREATE filetestlist2.txt
+CREATE filetestlist3.txt
+CREATE filetestlist4.txt
+CREATE filetestlist5.txt
+LIST 
+DELETE filetestlist5.txt
+DELETE filetestlist4.txt
+LIST

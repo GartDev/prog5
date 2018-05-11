@@ -1,0 +1,7 @@
+IMPORT small.txt small_import.txt
+IMPORT medium.txt medium_import.txt
+IMPORT large.txt large_import.txt
+LIST 
+CAT small.txt
+CAT medium.txt
+CAT large.txt

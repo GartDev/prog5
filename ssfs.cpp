@@ -71,37 +71,6 @@ int main(int argc, char **argv){
 	build_free_block_list();
 	build_inode_map();
 
-//	read("sample2.txt", 1, 100);
-	//write("sample3.txt", 'c', 0, 200);
-
-/*
-	inode * s = new inode("sample.txt", 128);
-
-	int j;
-	for (j = 0 ; j < 12 ; j++) {
-		s->direct_blocks[j] = 2*j;
-	}
-
-	FILE * disk = fopen(disk_file_name.c_str(), "rb+");
-	fwrite(s, sizeof(char), sizeof(inode), disk);
-	fclose(disk);
-
-	inode * s2;
-
-	char c[sizeof(inode)];
-
-	FILE * disk2 = fopen(disk_file_name.c_str(), "rb");
-	fread(c, sizeof(char), sizeof(inode), disk2);
-
-	s2 = (inode *) c;
-	std::cout << s2->file_name << std::endl;
-	std::cout << s2->file_size << std::endl;
-	fclose(disk2);
-
-	for (j = 0 ; j < 12 ; j++) {
-		std::cout << s2->direct_blocks[j] << std::endl;
-	}
-*/
 	int rc;
 
 	pthread_cond_init(&empty, NULL);
@@ -199,11 +168,14 @@ void *read_file(void *arg){
 void disk_scheduler(){
 	while (1){
 		pthread_mutex_lock(&mutex);
+		puts("disk testing 1");
 		while(buffer[0] == 0)
 			pthread_cond_wait(&full, &mutex);
+		puts("disk testing 2");
 		if(buffer[0] == 1){
 			//read
 			read_primitive(buffer[1]);
+			printf("global buffer: %s\n",global_buffer.c_str());
 		}else if(buffer[0] == 2){
 			//write
 			write_primitive(buffer[1]);
@@ -227,13 +199,15 @@ std::string read_request(int block){
 	pthread_mutex_lock(&mutex);
 	while(buffer[0] != 0)
 		pthread_cond_wait(&empty,&mutex);
-	global_buffer = "";
 	buffer[0] = 1;
 	buffer[1] = block;
+	global_buffer = "";
 	pthread_cond_signal(&full);
+	//puts("testing 1");
 	while (global_buffer == "") {
 		pthread_cond_wait(&empty, &mutex);
 	}
+	puts("testing 2");
 	std::string return_string = global_buffer;
 	pthread_mutex_unlock(&mutex);
 	return return_string;
